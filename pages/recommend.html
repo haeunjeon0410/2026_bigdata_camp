@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>추천 레시피 | 냉장고를 부탁해</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header class="site-header"><div class="container header-inner"><a class="site-logo" href="../index.html">냉장고를 부탁해</a><p class="site-subtitle">자취생편</p></div></header>
+  <nav class="site-navigation" aria-label="주요 메뉴"><div class="container nav-inner">
+    <a href="../index.html">Home</a><a href="refrigerator.html">내 냉장고</a><a href="recommend.html" aria-current="page">추천 레시피</a><a href="detail.html">레시피 상세</a><a href="favorite.html">⭐ 즐겨찾기</a>
+  </div></nav>
+
+  <main class="container main-content">
+    <section id="selected-ingredients-section" class="section">
+      <div class="section-header"><h1>추천 레시피</h1></div>
+      <h2>선택한 재료</h2>
+      <div id="selected-ingredients" class="placeholder">선택한 재료가 표시될 영역</div>
+    </section>
+
+    <section id="recipe-filter-section" class="section">
+      <div class="section-header"><h2>필터</h2></div>
+      <div id="recipe-filter-area" class="filter-area">
+        <select id="recipe-sort-filter" class="select" aria-label="레시피 정렬"><option>추천순</option><option>조리 시간순</option></select>
+        <select id="recipe-missing-filter" class="select" aria-label="부족한 재료 필터"><option>전체 레시피</option><option>재료를 모두 보유</option></select>
+      </div>
+    </section>
+
+    <section id="recipe-list-section" class="section">
+      <div class="section-header"><h2>추천 레시피 목록</h2></div>
+      <div id="recipe-list" class="recipe-list placeholder">추천 레시피 카드가 표시될 영역</div>
+    </section>
+
+    <section id="missing-ingredients-section" class="section">
+      <div class="section-header"><h2>부족한 재료</h2></div>
+      <div id="missing-ingredients" class="placeholder">부족한 재료가 표시될 영역</div>
+    </section>
+  </main>
+  <script src="../js/main.js"></script>
+</body>
+</html>

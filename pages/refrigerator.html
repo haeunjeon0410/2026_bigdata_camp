@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>내 냉장고 | 냉장고를 부탁해</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../index.html">냉장고를 부탁해</a>
+      <p class="site-subtitle">자취생편</p>
+    </div>
+  </header>
+  <nav class="site-navigation" aria-label="주요 메뉴">
+    <div class="container nav-inner">
+      <a href="../index.html">Home</a>
+      <a href="refrigerator.html" aria-current="page">내 냉장고</a>
+      <a href="recommend.html">추천 레시피</a>
+      <a href="detail.html">레시피 상세</a>
+      <a href="favorite.html">⭐ 즐겨찾기</a>
+    </div>
+  </nav>
+
+  <main class="container main-content">
+    <section id="ingredient-input-section" class="section">
+      <div class="section-header"><h1>내 냉장고</h1></div>
+      <p>냉장고에 있는 재료를 등록하세요.</p>
+      <div id="ingredient-input-area" class="form-row">
+        <label class="sr-only" for="ingredient-input">재료 입력</label>
+        <input id="ingredient-input" class="input" type="text" placeholder="재료명을 입력하세요">
+        <button id="ingredient-add-button" class="button" type="button">재료 추가</button>
+      </div>
+    </section>
+
+    <section id="ingredient-list-section" class="section">
+      <div class="section-header"><h2>재료 목록</h2></div>
+      <div id="ingredient-list" class="ingredient-list placeholder">등록한 재료가 표시될 영역</div>
+    </section>
+
+    <section id="ingredient-selection-section" class="section">
+      <div class="section-header">
+        <h2>재료 선택</h2>
+        <div id="ingredient-selection-actions">
+          <button id="select-all-button" class="button secondary" type="button">전체 선택</button>
+          <button id="deselect-all-button" class="button secondary" type="button">전체 해제</button>
+        </div>
+      </div>
+      <div id="ingredient-selection-list" class="ingredient-list placeholder">레시피 추천에 사용할 재료 선택 영역</div>
+      <a id="recommend-button" class="button" href="recommend.html">추천 레시피 보기</a>
+    </section>
+  </main>
+  <script src="../js/main.js"></script>
+</body>
+</html>
