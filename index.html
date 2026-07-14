@@ -71,14 +71,14 @@
       <div class="taste-section">
         <h4 class="taste-section-title">취향</h4>
         <div class="chip-container">
-          <button class="chip-btn active">🌶️ 매운 음식</button>
+          <button class="chip-btn">🌶️ 매운 음식</button>
           <button class="chip-btn">🥗 다이어트</button>
-          <button class="chip-btn active">🍖 고단백</button>
+          <button class="chip-btn">🍖 고단백</button>
           <button class="chip-btn">🍜 국물요리</button>
           <button class="chip-btn">🍚 밥요리</button>
           <button class="chip-btn">🍝 면요리</button>
           <button class="chip-btn">🍰 간식</button>
-          <button class="chip-btn active">⚡ 간단한 요리</button>
+          <button class="chip-btn">⚡ 간단한 요리</button>
           <button class="chip-btn">🥘 한식</button>
           <button class="chip-btn">🍕 양식</button>
         </div>
@@ -88,9 +88,9 @@
         <h4 class="taste-section-title">상황</h4>
         <div class="chip-container">
           <button class="chip-btn">⏰ 10분 안에</button>
-          <button class="chip-btn active">🏠 혼밥</button>
+          <button class="chip-btn">🏠 혼밥</button>
           <button class="chip-btn">🥶 냉장고 털이</button>
-          <button class="chip-btn active">🍺 술안주</button>
+          <button class="chip-btn">🍺 술안주</button>
           <button class="chip-btn">👥 손님용</button>
           <button class="chip-btn">🍱 도시락</button>
         </div>
@@ -117,25 +117,9 @@
       <p class="modal-subtitle" style="font-size: 13px; color: var(--color-gray); margin-bottom: 20px;">부족해서 담아둔 재료의 체크리스트입니다.</p>
       
       <ul class="shopping-checklist">
-        <li class="shopping-item" data-shopping-item>
-          <span class="chk-box">☐</span>
-          <span class="item-name">부침가루</span>
-        </li>
-        <li class="shopping-item checked" data-shopping-item aria-checked="true">
-          <span class="chk-box">☑</span>
-          <span class="item-name">식용유</span>
-        </li>
-        <li class="shopping-item" data-shopping-item>
-          <span class="chk-box">☐</span>
-          <span class="item-name">치즈</span>
-        </li>
-        <li class="shopping-item checked" data-shopping-item aria-checked="true">
-          <span class="chk-box">☑</span>
-          <span class="item-name">대파</span>
-        </li>
-        <li class="shopping-item" data-shopping-item>
-          <span class="chk-box">☐</span>
-          <span class="item-name">마늘</span>
+        <!-- 동적으로 부족한 식재료 체크리스트가 주입될 공간입니다. -->
+        <li class="shopping-item-empty" style="text-align:center; padding: 25px 0; color: var(--color-gray); font-family: var(--font-hand); font-size: 17px; list-style: none;">
+          장바구니가 비어 있습니다 🛒
         </li>
       </ul>
       

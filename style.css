@@ -1493,16 +1493,24 @@ h4 {
 
 .cooking-item-pan {
   font-size: 90px;
-  animation: cookSizzle 0.5s ease infinite alternate;
+  animation: cookJiggle 0.8s ease-in-out infinite;
 }
 
-@keyframes cookSizzle {
-  0% {
-    transform: scale(1) translateY(0) rotate(0deg);
+@keyframes cookJiggle {
+  0%, 100% {
+    transform: translateY(0) scaleY(1) rotate(0deg);
   }
-
-  100% {
-    transform: scale(1.05) translateY(-5px) rotate(4deg);
+  20% {
+    transform: translateY(2px) scaleY(0.95) rotate(-2deg);
+  }
+  40% {
+    transform: translateY(-8px) scaleY(1.06) rotate(4deg);
+  }
+  60% {
+    transform: translateY(1px) scaleY(0.98) rotate(-1deg);
+  }
+  80% {
+    transform: translateY(-3px) scaleY(1.02) rotate(2deg);
   }
 }
 
@@ -2650,6 +2658,70 @@ h4 {
 /* 😵 별점 평가 화면 - 물고기 태워서 눈 돌고 땀 삐질삐질 바르르 떠는 토끼 */
 .rating-mascot-wrap {
   width: 100px;
+              transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              margin-bottom 0.3s ease;
+}
+
+/* 클릭하여 활성화 시 솟아오르며 띠용 출현 */
+.hungry-bubble.show-bubble {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  margin-bottom: 4px;
+}
+
+.hungry-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: var(--color-white) transparent;
+  display: block;
+  width: 0;
+}
+.hungry-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px 8px 0;
+  border-style: solid;
+  border-color: var(--color-charcoal) transparent;
+  display: block;
+  width: 0;
+  z-index: -1;
+}
+
+/* 태블릿/PC 환경 (넓은 화면) - 냉장고 우측에 크게 배치되어 냉장고를 직시 */
+@media (min-width: 768px) {
+  .interactive-fridge-container {
+    position: relative;
+    overflow: visible; /* 토끼가 옆으로 삐져나갈 수 있게 허용 */
+  }
+  .fridge-hungry-bunny-wrap {
+    position: absolute;
+    right: -100px; /* 우측으로 치우치던 것을 70px 좌측으로 바짝 당김! */
+    bottom: 20px;
+    margin: 0;
+    width: 240px; /* 데스크톱 210px 거대 스펙 고정 */
+  }
+  .hungry-bubble.show-bubble {
+    margin-bottom: 6px;
+  }
+  .hungry-bubble::after {
+    left: 45%;
+  }
+  .hungry-bubble::before {
+    left: 45%;
+  }
+}
+
+/* 😵 별점 평가 화면 - 물고기 태워서 눈 돌고 땀 삐질삐질 바르르 떠는 토끼 */
+.rating-mascot-wrap {
+  width: 100px;
   height: 100px;
   margin-right: -10px;
   z-index: 2;
@@ -2659,28 +2731,67 @@ h4 {
   width: 100%;
   height: auto;
   filter: drop-shadow(2px 4px 0 rgba(74, 62, 61, 0.12));
-  animation: sweatJitter 1.2s ease-in-out infinite;
+  animation: ratingTilt 2.2s ease-in-out infinite alternate;
 }
-@keyframes sweatJitter {
-  0%, 100% {
-    transform: translate(0, 0) rotate(0deg);
+@keyframes ratingTilt {
+  0% {
+    transform: rotate(-3.5deg) translateY(0);
   }
-  20% {
-    transform: translate(-1px, 1px) rotate(-0.5deg);
+  100% {
+    transform: rotate(3.5deg) translateY(-4px); /* 느긋하게 둥실 뜨며 고개 까딱 */
   }
-  40% {
-    transform: translate(1px, -1px) rotate(0.5deg);
+}
+
+/* 🍮 1번 애니메이션: 식재료 스티커 젤리 쫀득 팝 (마음에 안 들면 이 영역 삭제 가능) */
+.pop-jelly {
+  animation: jellyStretch 0.35s ease-out forwards;
+}
+@keyframes jellyStretch {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scaleX(1.25) scaleY(0.75); /* 양옆으로 납작하게 찌부러짐 */
   }
   60% {
-    transform: translate(-1px, -1px) rotate(-0.2deg);
+    transform: scaleX(0.85) scaleY(1.2);  /* 위아래로 쫀득하게 늘어남 */
   }
   80% {
-    transform: translate(1px, 1px) rotate(0.2deg);
+    transform: scaleX(1.05) scaleY(0.95); /* 가볍게 반동 바운스 */
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
+/* ❤️ 하트 클릭 찜 활성화 팝업 파티클 효과 */
+.heart-burst-particle {
+  position: absolute;
+  font-size: 16px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  filter: drop-shadow(1px 2px 0 rgba(74, 62, 61, 0.08));
+  animation: heartExplode 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
 
-
+@keyframes heartExplode {
+  0% {
+    transform: translate(0, 0) scale(0.2) rotate(0deg);
+    opacity: 1;
+  }
+  15% {
+    transform: translate(0, -8px) scale(0.6) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.95) rotate(var(--rot));
+    opacity: 0;
+  }
+}
 
 
 

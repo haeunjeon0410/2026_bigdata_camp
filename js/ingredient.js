@@ -22,8 +22,10 @@ export function initIngredient() {
         state.selected.add(id);
         sticker.classList.add('selected');
         sticker.setAttribute('aria-checked', 'true');
-        sticker.classList.add('pop-bounce');
-        setTimeout(() => sticker.classList.remove('pop-bounce'), 350);
+        
+        // 🍮 1번 애니메이션: 식재료 스티커 젤리 쫀득 팝 (마음에 안 들면 이 한 줄 지우기 가능)
+        sticker.classList.add('pop-jelly');
+        setTimeout(() => sticker.classList.remove('pop-jelly'), 350);
       }
       updateFooter();
       updateCarouselRecipes();
@@ -52,14 +54,13 @@ export function initIngredient() {
     if (event.target.closest('.door-front')) {
       state.isFridgeOpen = true;
       document.querySelector('.interactive-fridge')?.classList.add('fridge-open');
-      showToast('냉장고 문을 열었어요! 🥛✨');
       return;
     }
 
     if (event.target.closest('.door-back')) {
       state.isFridgeOpen = false;
       document.querySelector('.interactive-fridge')?.classList.remove('fridge-open');
-      showToast('냉장고 문을 닫았어요.');
+      return;
     }
 
     // 이스터에그: 배고픈 토끼 클릭 시 말풍선 피어오르고 2.8초 뒤 스르륵 소멸
@@ -91,6 +92,7 @@ function updateFooter() {
   const count = state.selected.size;
   const countElement = document.querySelector('.selected-status span');
   if (countElement) countElement.textContent = count;
+  
   document.querySelectorAll('#btn-fridge-clear, #btn-suggest-recipes').forEach((button) => {
     button.disabled = count === 0;
   });

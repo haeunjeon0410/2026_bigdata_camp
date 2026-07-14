@@ -2,7 +2,7 @@ import { INGREDIENTS, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
 
 // Initial State Management
 export const state = {
-  selected: new Set(['egg', 'potato', 'onion']), // default selections
+  selected: new Set(), // 협업/테스트 검증을 위해 기본 선택 재료를 비워두었습니다.
   search: '',
   activeCategory: 'all',
   favorites: new Set(),
@@ -11,7 +11,7 @@ export const state = {
   // Refrigerator open state
   isFridgeOpen: false,
   showingAlternatives: false, // track whether showing alternative 6 recipes
-  cookedCounts: { r1: 2, alt3: 1 }, // default demo cooked counts (Pokemon center style!)
+  cookedCounts: {}, // 협업/테스트 검증을 위해 기본 조리 횟수를 비워두었습니다.
 
   // Recipe Carousel State
   carouselRecipes: [],
@@ -131,6 +131,11 @@ document.addEventListener('click', (e) => {
   if (navEl) {
     navigate(navEl.dataset.nav);
   }
+
+  // 홈 화면 타이틀 뱃지 클릭 시 파이브가이즈 크레딧 팝업 활성화 이스터에그!
+  if (e.target.closest('#btn-home-badge')) {
+    showCreditsModal();
+  }
 });
 
 // Mobile Hamburger Toggle
@@ -201,7 +206,7 @@ function renderHome() {
 
           <img src="character.png" alt="귀여운 토끼 요리사 메인 캐릭터" class="home-hero-img" />
         </div>
-        <div class="home-title-badge">자취생 맞춤 레시피 </div>
+        <div class="home-title-badge" id="btn-home-badge" style="cursor: pointer;">자취생 맞춤 레시피 </div>
         <h1 class="home-main-title">오늘 냉장고에<br/>뭐가 남아있나요?</h1>
         <p class="home-desc">남은 재료로 맛있고 알뜰하게 요리해보세요.<br/></p>
         <button class="btn btn-primary home-cta-btn" id="btn-start-fridge">시작하기</button>
@@ -615,7 +620,7 @@ function renderDetail(id) {
           
           <!-- Steps Memo Pad -->
           <div class="notebook-notepad">
-            <h4 class="notepad-title">👩‍🍳 주방 순서</h4>
+            <h4 class="notepad-title">👩🍳 주방 순서</h4>
             <ol class="notepad-steps">
               ${recipe.steps.map((step, idx) => `
                 <li data-step="${idx + 1}">${step}</li>
@@ -691,6 +696,7 @@ export function startCookingFlow(recipeId) {
   }, 100);
 }
 
+// Timer clear helper
 function clearCookingFlowTimers() {
   if (cookingIntervalId !== null) {
     clearInterval(cookingIntervalId);
@@ -936,47 +942,82 @@ document.addEventListener('DOMContentLoaded', () => {
   navigate('home');
 });
 
-/* ==================== ALTERNATIVE RECIPE SUGGESTION MODAL ==================== */
-export function showDislikeModal() {
-  let modal = document.getElementById('dislike-modal');
+
+
+/* ==================== 🐰 DEVELOPER CREDITS EASTER EGG MODAL ==================== */
+export function showCreditsModal() {
+  let modal = document.getElementById('credits-modal');
   if (!modal) {
     modal = document.createElement('div');
-    modal.id = 'dislike-modal';
+    modal.id = 'credits-modal';
     modal.className = 'custom-modal-overlay';
     document.body.appendChild(modal);
   }
 
   modal.innerHTML = `
-    <div class="custom-modal-content">
-      <button class="modal-close" onclick="document.getElementById('dislike-modal').classList.remove('show')">✖</button>
-      <div class="modal-emoji">🏪🍜🍙</div>
-      <h3 class="modal-title">냉장고에 먹을 게 없나요?</h3>
-      <p class="modal-subtitle">그렇다면 자취생들의 전설 신전! 편의점 꿀조합을 추천해 드려요!</p>
+    <div class="custom-modal-content credit-card-content" style="
+      max-width: 450px; 
+      width: 90%; 
+      padding: 35px 30px; 
+      border: 3px solid var(--color-charcoal); 
+      border-radius: var(--br-lg); 
+      box-shadow: 0 8px 0 var(--color-shadow); 
+      text-align: center; 
+      position: relative; 
+      background: #fffdf9;
+    ">
+      <!-- 우측 상단 x 닫기 버튼 -->
+      <button class="modal-close" onclick="document.getElementById('credits-modal').classList.remove('show')" style="
+        position: absolute; 
+        right: 15px; 
+        top: 12px; 
+        background: none; 
+        border: none; 
+        font-size: 18px; 
+        font-weight: bold; 
+        cursor: pointer; 
+        color: var(--color-charcoal);
+      ">✖</button>
       
-      <div class="modal-combos">
-        <div class="combo-item">
-          <div class="combo-name">🍝 마크정식</div>
-          <div class="combo-desc">자이언트 떡볶이 + 컵 스파게티 + 편의점 소시지 + 스트링 치즈. 단짠의 극치인 편의점 모디슈머 요리의 조상격!</div>
-        </div>
-        <div class="combo-item">
-          <div class="combo-name">🍙 불닭치즈삼김</div>
-          <div class="combo-desc">불닭볶음면 + 참치마요 삼각김밥 + 스트링 치즈. 면을 조금 남긴 용기에 삼김을 넣고 전자레인지에 돌려 비비면 환상!</div>
-        </div>
-        <div class="combo-item">
-          <div class="combo-name">🍜 신세개 라면</div>
-          <div class="combo-desc">기존 라면 끓일 때 쌈장 반스푼 + 대파 + 마지막에 계란 노른자 퐁당! 마치 일식 라멘이나 고깃집 후식 라면 맛이 납니다.</div>
-        </div>
-      </div>
+      <!-- 🍔 비밀 요리 본부 타이틀 -->
+      <h3 class="modal-title" style="
+        font-size: 24px; 
+        font-weight: 850; 
+        color: var(--color-orange-deep); 
+        margin: 0 0 24px 0; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        gap: 8px; 
+        font-family: var(--font-main);
+      ">
+        <span style="font-size: 26px;"></span> 비밀 요리 본부
+      </h3>
       
-      <div style="text-align: center;">
-        <button class="btn btn-primary btn-sm" onclick="document.getElementById('dislike-modal').classList.remove('show')" style="width: 100%;">
-          좋아요! 마트/편의점에 갈래요 🏃‍♂️
-        </button>
+      <!-- 개발 | 파이브가이즈 🍔🍟 알약 카드 박스 -->
+      <div class="credit-list" style="
+        text-align: center; 
+        background: var(--color-cream-light); 
+        border: 2px solid var(--color-charcoal); 
+        border-radius: 99px; 
+        padding: 16px 20px; 
+        font-family: var(--font-hand); 
+        font-size: 21px; 
+        color: var(--color-charcoal); 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        gap: 8px; 
+        font-weight: 800; 
+        box-shadow: inset 1px 2px 0 rgba(0,0,0,0.03);
+        width: 100%;
+        box-sizing: border-box;
+      ">
+        개발 | 파이브가이즈 <span style="font-size: 23px; display:inline-flex; gap:2px;">🍔🍟</span>
       </div>
     </div>
   `;
 
-  // Forces layout reflow and adds class for fade transition
   modal.offsetHeight;
   modal.classList.add('show');
 }
