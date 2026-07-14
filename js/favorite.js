@@ -6,6 +6,39 @@
 
 import { state, render } from './app.js';
 
+const FAVORITE_ADDED_AT_KEY = 'favoriteAddedAt';
+
+export function getFavoriteAddedAtMap() {
+  try {
+    const value = JSON.parse(localStorage.getItem(FAVORITE_ADDED_AT_KEY) || 'null');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveFavoriteAddedAtMap(map) {
+  const safeMap = map && typeof map === 'object' && !Array.isArray(map) ? map : {};
+  localStorage.setItem(FAVORITE_ADDED_AT_KEY, JSON.stringify(safeMap));
+  return safeMap;
+}
+
+export function recordFavoriteAddedAt(recipeId) {
+  const map = getFavoriteAddedAtMap();
+  map[recipeId] = new Date().toISOString();
+  saveFavoriteAddedAtMap(map);
+}
+
+export function removeFavoriteAddedAt(recipeId) {
+  const map = getFavoriteAddedAtMap();
+  delete map[recipeId];
+  saveFavoriteAddedAtMap(map);
+}
+
+export function getFavoriteAddedAt(recipeId) {
+  return getFavoriteAddedAtMap()[recipeId];
+}
+
 export function initFavorite() {
   document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-recipe-id]');
@@ -19,8 +52,10 @@ export function initFavorite() {
 
     if (state.favorites.has(recipeId)) {
       state.favorites.delete(recipeId);
+      removeFavoriteAddedAt(recipeId);
     } else {
       state.favorites.add(recipeId);
+      recordFavoriteAddedAt(recipeId);
       // ❤️ 하트 이스터에그 팝업 파티클 발동! (찜할 때만 귀엽게 뿜어 나오도록 설계)
       triggerHeartBurst(event);
     }

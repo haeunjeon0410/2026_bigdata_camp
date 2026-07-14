@@ -5,6 +5,8 @@
 /* 레시피 및 조리 기능 모듈 */
 
 import { state, showToast, render, navigate } from './app.js';
+import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { addShoppingItems } from './shopping.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -54,6 +56,60 @@ export function renderSubstituteTips(recipe) {
   `;
 }
 
+function getIngredientKeys(value) {
+  if (value == null) return [];
+  if (typeof value === 'string' || typeof value === 'number') {
+    const normalized = String(value).trim().toLowerCase();
+    return normalized ? [normalized] : [];
+  }
+  if (typeof value === 'object') {
+    return [value.id, value.ingredientId, value.name, value.ingredientName, value.label]
+      .filter((item) => item != null && String(item).trim())
+      .map((item) => String(item).trim().toLowerCase());
+  }
+  return [];
+}
+
+function getIngredientName(need, recipeIngredient) {
+  const needName = typeof need === 'object'
+    ? [need.name, need.ingredientName, need.label].find((item) => item != null && String(item).trim())
+    : null;
+  const recipeName = typeof recipeIngredient === 'object'
+    ? [recipeIngredient.name, recipeIngredient.ingredientName, recipeIngredient.label].find((item) => item != null && String(item).trim())
+    : recipeIngredient;
+  return String(needName || recipeName || need || '').trim();
+}
+
+function getIngredientAmount(need) {
+  if (need && typeof need === 'object') {
+    return String(need.amount || need.quantity || '1개').trim() || '1개';
+  }
+  return '1개';
+}
+
+function getMissingIngredients(recipe, selectedKeys) {
+  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing) && recipe.missing.length) {
+    return recipe.missing
+      .map((ingredientName) => ({ ingredientName: String(ingredientName).trim(), amount: '1개' }))
+      .filter((item) => item.ingredientName);
+  }
+
+  return (Array.isArray(recipe?.need) ? recipe.need : [])
+    .map((need, index) => {
+      const recipeIngredient = recipe.ingredients?.[index];
+      const needKeys = new Set([
+        ...getIngredientKeys(need),
+        ...getIngredientKeys(recipeIngredient)
+      ]);
+      if ([...needKeys].some((key) => selectedKeys.has(key))) return null;
+      return {
+        ingredientName: getIngredientName(need, recipeIngredient),
+        amount: getIngredientAmount(need)
+      };
+    })
+    .filter((item) => item && item.ingredientName);
+}
+
 export function initRecipe() {
   document.addEventListener('click', (event) => {
     const start = event.target.closest('#btn-start-fridge');
@@ -90,10 +146,35 @@ export function initRecipe() {
     }
 
     if (event.target.closest('#btn-view-shopping')) {
-      showToast('장바구니에 담았습니다!');
+      const recipe = [...RECIPES, ...ALTERNATIVE_RECIPES]
+        .find((item) => item.id === state.currentDetail);
+      const selectedValues = state.selected instanceof Set
+        ? [...state.selected]
+        : Array.isArray(state.selected)
+          ? state.selected
+          : [];
+      const selectedKeys = new Set(selectedValues.flatMap(getIngredientKeys));
+      const missingIngredients = recipe ? getMissingIngredients(recipe, selectedKeys) : [];
+
+      if (missingIngredients.length === 0) {
+        showToast('부족한 재료가 없습니다!');
+        return;
+      }
+
+      const addedItems = addShoppingItems(missingIngredients.map(({ ingredientName, amount }) => ({
+        ingredientName,
+        amount,
+        recipeId: recipe.id,
+        recipeName: recipe.name,
+        completed: false,
+        addedAt: new Date().toISOString()
+      })));
+
+      showToast(addedItems.length > 0
+        ? `부족한 재료 ${addedItems.length}개를 장보기 리스트에 담았어요!`
+        : '이미 장보기 리스트에 담긴 재료입니다.');
       return;
     }
-
     const cooking = event.target.closest('#btn-start-cooking');
     if (cooking) {
       navigate('cooking', cooking.dataset.recipeId);
@@ -123,5 +204,3 @@ export function initRecipe() {
     }
   });
 }
-
-
