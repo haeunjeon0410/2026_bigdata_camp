@@ -1,0 +1,2303 @@
+:root {
+  --color-mint: #78C0A8;
+  --color-mint-light: #EBF7F4;
+  --color-mint-deep: #4A8E77;
+  --color-cream: #FAF4E8;
+  --color-cream-light: #FFFDF9;
+  --color-cream-dark: #E6DCBF;
+  --color-orange: #FF7A5A;
+  --color-orange-light: #FFF0ED;
+  --color-orange-deep: #D45437;
+  --color-white: #FFFFFF;
+  --color-charcoal: #4A3E3D;
+  --color-gray: #8F807D;
+  --color-gray-light: #F0EAE1;
+  --color-shadow: rgba(74, 62, 61, 0.15);
+  --color-alert-bg: #FFE5E5;
+  --color-alert-text: #C0392B;
+
+  --font-main: 'Gowun Dodum', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  --font-hand: 'Gaegu', cursive, 'Nanum Pen Script', sans-serif;
+
+  --br-lg: 32px;
+  --br-md: 20px;
+  --br-sm: 12px;
+
+  --border-thick: 4px solid var(--color-charcoal);
+  --border-thin: 2px solid var(--color-charcoal);
+}
+
+/* Base resets & styles in Animal Crossing feel */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--color-cream);
+  background-image: radial-gradient(var(--color-cream-dark) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  color: var(--color-charcoal);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+button {
+  font-family: var(--font-main);
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+input {
+  font-family: var(--font-main);
+  color: var(--color-charcoal);
+}
+
+/* Typography styles */
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 800;
+}
+
+/* App Header - Cute Signpost Style */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--color-white);
+  border-bottom: var(--border-thick);
+  padding: 12px 24px;
+  box-shadow: 0 4px 0 var(--color-shadow);
+}
+
+.header-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05) rotate(-1deg);
+}
+
+.logo-emoji {
+  font-size: 32px;
+  background: var(--color-mint-light);
+  padding: 6px;
+  border-radius: var(--br-sm);
+  border: var(--border-thin);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-main {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+  line-height: 1.2;
+}
+
+.logo-sub {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-orange);
+  background: var(--color-orange-light);
+  padding: 1px 6px;
+  border-radius: 99px;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.nav {
+  display: flex;
+  gap: 6px;
+}
+
+.nav-btn {
+  padding: 10px 18px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--color-charcoal);
+  border: 2px solid transparent;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nav-btn:hover {
+  background-color: var(--color-mint-light);
+  border-color: var(--color-mint);
+  transform: translateY(-2px);
+}
+
+.nav-btn.active {
+  background-color: var(--color-mint);
+  color: var(--color-white);
+  border: var(--border-thin);
+  box-shadow: 0 4px 0 var(--color-charcoal);
+  transform: translateY(-1px);
+}
+
+.hamburger {
+  display: none;
+  font-size: 24px;
+  background: var(--color-gray-light);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 4px 8px;
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+}
+
+/* Layout container */
+#app {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 16px 120px;
+  flex: 1;
+}
+
+.page {
+  animation: pageSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15) forwards;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Custom Buttons - Toy/Game Button Style */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  white-space: nowrap;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--color-charcoal);
+  border: var(--border-thick);
+  box-shadow: 0 6px 0 var(--color-charcoal);
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select: none;
+}
+
+.btn-sm {
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 0 var(--color-charcoal) !important;
+  border: var(--border-thick) !important;
+}
+
+.btn-sm:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 0 var(--color-charcoal) !important;
+}
+
+.btn-sm:active {
+  transform: translateY(2px) !important;
+  box-shadow: 0 1px 0 var(--color-charcoal) !important;
+}
+
+.btn-primary {
+  background-color: var(--color-orange);
+  color: var(--color-white);
+}
+
+.btn-primary:hover {
+  background-color: #ff9075;
+  transform: translateY(-3px);
+  box-shadow: 0 9px 0 var(--color-charcoal);
+}
+
+.btn-primary:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 var(--color-charcoal);
+}
+
+.btn-secondary {
+  background-color: var(--color-mint);
+  color: var(--color-white);
+}
+
+.btn-secondary:hover {
+  background-color: #8cd6bf;
+  transform: translateY(-3px);
+  box-shadow: 0 9px 0 var(--color-charcoal);
+}
+
+.btn-secondary:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 var(--color-charcoal);
+}
+
+.btn-outline {
+  background-color: var(--color-white);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-gray-light);
+  transform: translateY(-3px);
+  box-shadow: 0 9px 0 var(--color-charcoal);
+}
+
+.btn-outline:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 var(--color-charcoal);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 4px 0 var(--color-charcoal) !important;
+}
+
+/* ==================== 1. HOME PAGE ==================== */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.home-card {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  padding: 40px 30px;
+  box-shadow: 0 8px 0 var(--color-shadow);
+  max-width: 540px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* Cute masking tapes on Home Card */
+.home-card::before {
+  content: '';
+  position: absolute;
+  top: -15px;
+  left: 30px;
+  width: 90px;
+  height: 28px;
+  background-color: rgba(246, 219, 137, 0.7);
+  transform: rotate(-4deg);
+  border: 1px dashed rgba(74, 62, 61, 0.3);
+}
+
+.home-card::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  right: 40px;
+  width: 80px;
+  height: 28px;
+  background-color: rgba(246, 219, 137, 0.7);
+  transform: rotate(3deg);
+  border: 1px dashed rgba(74, 62, 61, 0.3);
+}
+
+.home-hero-wrap {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 24px;
+  border: var(--border-thick);
+  border-radius: var(--br-md);
+  overflow: hidden;
+  box-shadow: 0 4px 0 var(--color-charcoal);
+  background-color: var(--color-mint-light);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.home-title-badge {
+  background-color: var(--color-mint);
+  color: var(--color-white);
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: var(--br-sm);
+  border: var(--border-thin);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.home-main-title {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 16px;
+  color: var(--color-charcoal);
+  font-family: var(--font-main);
+}
+
+.home-desc {
+  font-size: 15px;
+  color: var(--color-gray);
+  margin-bottom: 28px;
+  word-break: keep-all;
+}
+
+.home-cta-btn {
+  width: 100%;
+  max-width: 280px;
+  font-size: 18px;
+}
+
+/* ==================== 2. MY FRIDGE PAGE ==================== */
+.fridge-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.fridge-title {
+  font-size: 20px;
+  color: var(--color-charcoal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fridge-subtitle {
+  font-size: 12px;
+  color: var(--color-gray);
+  margin-top: 2px;
+}
+
+/* 3D Compact Refrigerator Layout */
+.interactive-fridge-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.interactive-fridge {
+  position: relative;
+  width: 100%;
+  max-width: 355px;
+  height: 520px;
+  perspective: 1500px;
+  margin-bottom: 12px;
+}
+
+.fridge-cabinet {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-mint);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  box-shadow: 0 8px 0 var(--color-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cabinet Top Freezer Door */
+.freezer-section {
+  position: relative;
+  height: 110px;
+  background-color: var(--color-mint);
+  border-bottom: var(--border-thick);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  z-index: 8;
+}
+
+.freezer-door {
+  width: 96%;
+  height: 90%;
+  background-color: #8ed6bf;
+  border-radius: var(--br-md);
+  border: var(--border-thin);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.1), 0 2px 0 rgba(255, 255, 255, 0.15);
+}
+
+.freezer-brand {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-mint-deep);
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+
+/* Magnet search pad on freezer door */
+.search-magnet-note {
+  background: var(--color-white);
+  border: var(--border-thin);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  padding: 4px 8px;
+  transform: rotate(-1.5deg);
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 200px;
+}
+
+.search-magnet-note .magnet-pin {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+}
+
+.search-magnet-note input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 11px;
+  width: 100%;
+  font-weight: 800;
+  text-align: center;
+  font-family: var(--font-main);
+  padding: 2px 0;
+}
+
+/* Refrigerator Interior Compartment */
+.fridge-main-section {
+  position: relative;
+  flex: 1;
+  background-color: #E2F5EE;
+  /* Lit interior green */
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+  box-shadow: inset 0 0 24px rgba(74, 98, 89, 0.2);
+  overflow: visible;
+  /* allows door swing */
+  z-index: 5;
+}
+
+.fridge-cavity-interior {
+  position: absolute;
+  inset: 0;
+  padding: 10px 12px 80px 12px;
+  /* space for veggie drawer */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.fridge-shelves-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.fridge-shelf-rack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-bottom: 5px solid var(--color-cream-dark);
+  /* Wood shelf edge */
+  padding-bottom: 2px;
+  justify-content: flex-end;
+}
+
+.fridge-shelf-rack::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 1.5px;
+  background-color: var(--color-charcoal);
+}
+
+.shelf-label {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  font-size: 8px;
+  font-weight: 800;
+  background-color: var(--color-gray-light);
+  color: var(--color-charcoal);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--color-charcoal);
+  opacity: 0.8;
+}
+
+.shelf-items {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1px 2px;
+}
+
+.shelf-empty {
+  font-size: 9px;
+  color: var(--color-gray);
+  font-style: italic;
+  margin-bottom: 2px;
+  opacity: 0.5;
+}
+
+/* Vegetable Drawer at bottom */
+.fridge-drawer-vegetable {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  height: 70px;
+  background-color: #BDE4D2;
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  z-index: 3;
+  box-shadow: inset 0 3px 4px rgba(0, 0, 0, 0.06), 0 2px 0 var(--color-charcoal);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px;
+}
+
+.drawer-handle {
+  align-self: center;
+  background-color: var(--color-white);
+  padding: 1px 8px;
+  border-radius: var(--br-sm);
+  border: var(--border-thin);
+  font-size: 9px;
+  font-weight: 800;
+  box-shadow: 1.5px 1.5px 0 var(--color-charcoal);
+  margin-bottom: 2px;
+  color: var(--color-mint-deep);
+  line-height: 1;
+}
+
+.drawer-items {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Swing Refrigerator Door */
+.fridge-swing-door {
+  position: absolute;
+  inset: 0;
+  top: -2px;
+  bottom: -2px;
+  left: -2px;
+  width: 100%;
+  z-index: 10;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+  pointer-events: auto;
+}
+
+.interactive-fridge.fridge-open .fridge-swing-door {
+  transform: rotateY(-138deg);
+}
+
+/* Prevent double click issues when closed */
+.interactive-fridge:not(.fridge-open) .fridge-cavity-interior,
+.interactive-fridge:not(.fridge-open) .fridge-drawer-vegetable {
+  pointer-events: none;
+}
+
+/* Bottom Door Front (Closed) */
+.door-front {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-mint);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  backface-visibility: hidden;
+  box-shadow: inset -5px 0 0 rgba(74, 98, 89, 0.15), 2px 0 0 rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 12;
+}
+
+.door-front:hover {
+  filter: brightness(1.02);
+}
+
+.door-front .fridge-handle {
+  position: absolute;
+  right: 14px;
+  top: 35%;
+  width: 12px;
+  height: 72px;
+  background: var(--color-cream-light);
+  border: var(--border-thick);
+  border-radius: var(--br-sm);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.12);
+}
+
+.click-to-open-sticker {
+  background-color: var(--color-orange);
+  color: var(--color-white);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 6px 12px;
+  font-weight: 800;
+  font-size: 12px;
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  animation: fridgeBounceSticker 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes fridgeBounceSticker {
+  0% {
+    transform: translateY(0) rotate(-1.5deg) scale(1);
+  }
+
+  100% {
+    transform: translateY(-5px) rotate(1.5deg) scale(1.02);
+  }
+}
+
+.fridge-postits {
+  position: absolute;
+  left: 14px;
+  top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.postit {
+  padding: 4px 8px;
+  font-family: var(--font-hand);
+  font-size: 13px;
+  border: 1px dashed rgba(74, 62, 61, 0.22);
+  box-shadow: 1.5px 1.5px 0 var(--color-shadow);
+  color: var(--color-charcoal);
+}
+
+.postit.p1 {
+  background-color: #FFFDE7;
+  transform: rotate(-3deg);
+}
+
+.postit.p2 {
+  background-color: #E8F5E9;
+  transform: rotate(2deg);
+}
+
+/* Door Back interface (Visible when opened) */
+.door-back {
+  position: absolute;
+  inset: 0;
+  background-color: #8ed6bf;
+  /* mint inner shade */
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
+  box-shadow: inset 5px 0 0 rgba(0, 0, 0, 0.08);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 11;
+  cursor: pointer;
+  /* Click door to close */
+}
+
+.door-pocket-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-mint-deep);
+  border-bottom: 2px dashed var(--color-mint-deep);
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+  text-align: center;
+}
+
+.door-pockets-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.door-pocket {
+  background-color: var(--color-cream-light);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: 1.5px 1.5px 0 var(--color-charcoal);
+  transition: all 0.12s ease;
+  color: var(--color-charcoal);
+}
+
+.door-pocket:hover {
+  transform: translateX(3px) scale(1.01);
+  background-color: var(--color-white);
+}
+
+.door-pocket.active {
+  background-color: var(--color-orange-light);
+  border-color: var(--color-orange);
+  box-shadow: 1.5px 1.5px 0 var(--color-orange-deep);
+}
+
+/* Compact sticker components inside fridge shelves - FIXED ABSOLUTE CHECKMARK POSITIONING */
+.interactive-fridge .ingredient-sticker {
+  position: relative;
+  /* Context for absolute target chk */
+  padding: 5px 8px;
+  border-radius: var(--br-sm);
+  background-color: var(--color-white);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  border: 1.5px solid var(--color-charcoal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transform: rotate(var(--tilt, 0deg));
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+  margin-bottom: 2px;
+}
+
+.interactive-fridge .ingredient-sticker:hover {
+  transform: scale(1.08) rotate(0deg);
+  background-color: var(--color-white);
+  z-index: 10;
+}
+
+.interactive-fridge .ingredient-sticker.selected {
+  background-color: #E8F8F2;
+  /* Soft mint green chosen background */
+  border-color: var(--color-mint);
+  box-shadow: 2px 2px 0 var(--color-mint-deep);
+}
+
+.interactive-fridge .sticker-emoji {
+  font-size: 15px;
+  /* compact */
+  margin-bottom: 0px;
+  display: inline;
+}
+
+.interactive-fridge .sticker-name {
+  font-size: 11px;
+  /* smaller readable font */
+  font-weight: 800;
+  display: inline;
+}
+
+/* FIXED Checkbox overlays at top right */
+.interactive-fridge .sticker-chk {
+  position: absolute !important;
+  top: -6px !important;
+  right: -6px !important;
+  width: 14px !important;
+  height: 14px !important;
+  background-color: var(--color-orange) !important;
+  color: var(--color-white) !important;
+  border: 1.5px solid var(--color-charcoal) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  box-shadow: 1px 1px 0 var(--color-charcoal) !important;
+  transform: scale(0) !important;
+  opacity: 0 !important;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.25) !important;
+}
+
+.interactive-fridge .ingredient-sticker.selected .sticker-chk {
+  transform: scale(1) !important;
+  opacity: 1 !important;
+}
+
+/* Compact bottom actions bar for My Fridge */
+.fridge-bottom-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 355px;
+  width: 100%;
+  margin: 16px auto 0;
+  padding: 4px;
+}
+
+.selected-status {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+}
+
+.selected-status span {
+  color: var(--color-orange);
+  font-size: 16px;
+  margin: 0 2px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Cute Refrigerator standing option legs */
+.fridge-legs-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 40px;
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fridge-leg-pin {
+  width: 18px;
+  height: 6px;
+  background-color: var(--color-charcoal);
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.search-no-results {
+  text-align: center;
+  padding: 12px;
+  color: var(--color-gray);
+  font-size: 10px;
+  width: 100%;
+}
+
+/* ==================== 3. RECOMMENDED RECIPES ==================== */
+.recipes-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Carousel Section */
+.carousel-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  margin: 30px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Heavy Signpost navigation arrows */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px;
+  height: 52px;
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: 50%;
+  box-shadow: 0 4px 0 var(--color-charcoal);
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.carousel-btn:hover {
+  transform: translateY(-55%) scale(1.08);
+  background-color: var(--color-mint-light);
+}
+
+.carousel-btn:active {
+  transform: translateY(-45%) scale(0.95);
+  box-shadow: 0 2px 0 var(--color-charcoal);
+}
+
+.carousel-btn-prev {
+  left: -26px;
+}
+
+.carousel-btn-next {
+  right: -26px;
+}
+
+/* Sliding Cards Frame */
+.carousel-track {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--br-lg);
+  padding: 6px;
+  /* give space for active shadows */
+}
+
+/* Recipe Card - Simple, Compact, Clean */
+.recipe-card-box {
+  width: 100%;
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  box-shadow: 0 8px 0 var(--color-shadow);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+.recipe-card-header {
+  height: 130px;
+  background: linear-gradient(135deg, var(--color-mint) 0%, #C3ECDF 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  position: relative;
+  border-bottom: var(--border-thick);
+}
+
+/* Cute wavy separator element */
+.recipe-card-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-size: 16px 8px;
+  background-repeat: repeat-x;
+  background-image: radial-gradient(circle at 8px 0px, transparent 4px, var(--color-white) 4px);
+}
+
+.recipe-fav-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--color-white);
+  border: var(--border-thin);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.recipe-fav-toggle:hover {
+  transform: scale(1.1);
+}
+
+.recipe-fav-toggle.active {
+  background-color: #FFE5E5;
+}
+
+.recipe-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recipe-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+}
+
+.recipe-meta-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.recipe-meta-tag {
+  background-color: var(--color-cream-light);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.recipe-meta-tag.match-tag {
+  background-color: var(--color-mint-light);
+  color: var(--color-mint-deep);
+  border-color: var(--color-mint);
+}
+
+/* Shopping Notepad Style for Missing Ingredients */
+.recipe-missing-box {
+  background-color: #FFFCEB;
+  border: 2px dashed var(--color-orange);
+  border-left: 6px solid var(--color-orange);
+  border-radius: var(--br-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: var(--font-hand);
+  font-size: 14px;
+}
+
+.recipe-missing-title {
+  font-weight: 800;
+  margin-bottom: 2px;
+  color: var(--color-orange-deep);
+}
+
+.recipe-missing-items {
+  color: var(--color-charcoal);
+}
+
+.recipe-action {
+  margin-top: 14px;
+}
+
+.recipe-detail-btn {
+  width: 100%;
+}
+
+/* Carousel Indicators */
+.carousel-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.carousel-dot {
+  width: 12px;
+  height: 12px;
+  background-color: var(--color-cream-dark);
+  border-radius: 50%;
+  border: 1px solid var(--color-charcoal);
+  transition: all 0.2s ease;
+}
+
+.carousel-dot.active {
+  width: 24px;
+  border-radius: 6px;
+  background-color: var(--color-orange);
+}
+
+/* ==================== 4. RECIPE DETAIL PAGE ==================== */
+.detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.btn-back-wrap {
+  align-self: flex-start;
+}
+
+/* Open Book Layout styling */
+.notebook-book {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  box-shadow: 0 8px 0 var(--color-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 769px) {
+  .notebook-book {
+    flex-direction: row;
+    min-height: 520px;
+  }
+}
+
+/* Left page in Notebook */
+.notebook-left-page {
+  flex: 1;
+  background-color: var(--color-mint-light);
+  border-bottom: var(--border-thick);
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+@media (min-width: 769px) {
+  .notebook-left-page {
+    border-bottom: none;
+    border-right: var(--border-thick);
+  }
+
+  /* Rings in the center spine of notebook */
+  .notebook-left-page::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    bottom: 20px;
+    right: -14px;
+    width: 28px;
+    background-image: radial-gradient(circle, var(--color-charcoal) 6px, transparent 7px);
+    background-size: 28px 48px;
+    z-index: 10;
+  }
+}
+
+.notebook-sticker-frame {
+  width: 140px;
+  height: 140px;
+  font-size: 80px;
+  background: var(--color-white);
+  border: var(--border-thick);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 0 var(--color-charcoal);
+  margin-bottom: 20px;
+  transform: rotate(-3deg);
+}
+
+.notebook-recipe-title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+
+.notebook-detail-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.notebook-ai-reason {
+  background-color: var(--color-white);
+  border: var(--border-thin);
+  border-radius: var(--br-md);
+  padding: 16px;
+  font-size: 14px;
+  text-align: left;
+  line-height: 1.6;
+  position: relative;
+  box-shadow: 3px 3px 0 var(--color-shadow);
+  word-break: keep-all;
+}
+
+.notebook-ai-reason::before {
+  content: '🌳 AI 셰프 한마디';
+  display: block;
+  font-weight: 800;
+  color: var(--color-mint-deep);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+/* Right page in Notebook (Yellow Ruled Note) */
+.notebook-right-page {
+  flex: 1.2;
+  padding: 30px 24px;
+  background-color: var(--color-cream-light);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Notebook Ruled Paper Section */
+.notebook-notepad {
+  background-color: #FFFDF0;
+  border: var(--border-thin);
+  border-radius: var(--br-md);
+  padding: 20px;
+  box-shadow: 3px 3px 0 var(--color-cream-dark);
+  background-image: repeating-linear-gradient(#FFFDF0 0px, #FFFDF0 29px, #ede2c9 30px);
+  position: relative;
+}
+
+/* Tape sticker holding the notepad */
+.notebook-notepad::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  width: 70px;
+  height: 20px;
+  background-color: rgba(255, 179, 71, 0.4);
+  transform: rotate(-3deg);
+  border: 1px dashed rgba(74, 62, 61, 0.2);
+}
+
+.notepad-title {
+  font-family: var(--font-hand);
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--color-orange-deep);
+  border-bottom: 2px solid var(--color-orange);
+  padding-bottom: 4px;
+  line-height: 1;
+}
+
+.notepad-list {
+  list-style: none;
+  font-family: var(--font-main);
+  font-size: 14px;
+  padding-left: 4px;
+}
+
+.notepad-list li {
+  line-height: 30px;
+  /* match line height of notebook rules */
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notepad-list li::before {
+  content: '☘️';
+  font-size: 11px;
+}
+
+.notepad-steps {
+  list-style: none;
+  font-family: var(--font-main);
+  font-size: 14px;
+}
+
+.notepad-steps li {
+  padding-left: 28px;
+  position: relative;
+  line-height: 1.6;
+  margin-bottom: 14px;
+  word-break: keep-all;
+}
+
+.notepad-steps li::before {
+  content: attr(data-step);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  background-color: var(--color-mint);
+  color: var(--color-white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid var(--color-charcoal);
+}
+
+.detail-actions-tray {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.detail-actions-tray button {
+  flex: 1;
+}
+
+/* ==================== 5. COOKING PAGE ==================== */
+.cooking-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 0;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.cooking-box {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  padding: 50px 30px;
+  box-shadow: 0 8px 0 var(--color-shadow);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Cooking pot and sizzle animation */
+.cooking-animation-area {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cooking-item-pan {
+  font-size: 90px;
+  animation: cookSizzle 0.5s ease infinite alternate;
+}
+
+@keyframes cookSizzle {
+  0% {
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+
+  100% {
+    transform: scale(1.05) translateY(-5px) rotate(4deg);
+  }
+}
+
+/* Bubbling ingredients climbing up */
+.cooking-bubble-particle {
+  position: absolute;
+  font-size: 28px;
+  bottom: 80px;
+  opacity: 0;
+  animation: floatIngredientUp 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+@keyframes floatIngredientUp {
+  0% {
+    bottom: 50px;
+    opacity: 0;
+    transform: scale(0.5) translateX(0);
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 0.8;
+  }
+
+  100% {
+    bottom: 140px;
+    opacity: 0;
+    transform: scale(1.1) translateX(var(--x-offset, 20px));
+  }
+}
+
+.cooking-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.cooking-desc {
+  font-size: 15px;
+  color: var(--color-gray);
+  margin-bottom: 32px;
+}
+
+/* Progress bar inside cooking screen */
+.cooking-progress-bar {
+  width: 100%;
+  height: 16px;
+  background-color: var(--color-gray-light);
+  border: var(--border-thin);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cooking-progress-fill {
+  height: 100%;
+  background-color: var(--color-mint);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+/* ==================== 6. COMPLETED PAGE ==================== */
+.completed-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 0;
+  max-width: 500px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.completed-card {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  padding: 40px 30px;
+  box-shadow: 0 8px 0 var(--color-shadow);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.completed-celebration-emoji {
+  width: 160px;
+  height: 160px;
+  font-size: 100px;
+  background: var(--color-orange-light);
+  border: var(--border-thick);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 0 var(--color-charcoal);
+  margin-bottom: 24px;
+  animation: celebrateBounce 0.8s ease infinite alternate;
+}
+
+@keyframes celebrateBounce {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+
+  100% {
+    transform: translateY(-10px) scale(1.05) rotate(5deg);
+  }
+}
+
+.completed-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-orange-deep);
+  margin-bottom: 12px;
+}
+
+.completed-dish-name {
+  font-size: 22px;
+  font-weight: 850;
+  margin-bottom: 20px;
+  background-color: var(--color-gray-light);
+  padding: 6px 20px;
+  border-radius: var(--br-sm);
+  border: var(--border-thin);
+  display: inline-block;
+}
+
+.completed-ingredients-label {
+  font-size: 13px;
+  color: var(--color-gray);
+  margin-bottom: 8px;
+}
+
+.completed-ingredients-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.completed-ing-sticker {
+  background: var(--color-cream-light);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.completed-action-btn {
+  width: 100%;
+}
+
+/* Floating Confetti particles */
+.confetti-particle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.8;
+  z-index: 5;
+  animation: confettiFall 3s linear infinite;
+}
+
+@keyframes confettiFall {
+  0% {
+    top: -20px;
+    transform: translateX(0) rotate(0deg);
+  }
+
+  100% {
+    top: 100%;
+    transform: translateX(var(--fall-x, 80px)) rotate(360deg);
+  }
+}
+
+/* ==================== 7. RATING PAGE ==================== */
+.rating-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 520px;
+  margin: 20px auto;
+}
+
+/* Animal Crossing Dialog Box */
+.dialogue-section {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 30px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.mascot-avatar {
+  font-size: 60px;
+  background: var(--color-white);
+  border: var(--border-thick);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 0 var(--color-charcoal);
+  flex-shrink: 0;
+  transform: rotate(-4deg);
+}
+
+.speech-bubble {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  border-bottom-left-radius: 4px;
+  padding: 20px 24px;
+  position: relative;
+  box-shadow: 0 6px 0 var(--color-shadow);
+  flex-grow: 1;
+}
+
+.speech-bubble-text {
+  font-family: var(--font-hand);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.speech-arrow {
+  position: absolute;
+  bottom: -4px;
+  right: 18px;
+  font-size: 16px;
+  color: var(--color-orange);
+  animation: arrowPulse 0.6s infinite alternate;
+}
+
+@keyframes arrowPulse {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(3px);
+  }
+}
+
+/* Feeling selection buttons column */
+.rating-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-bottom: 30px;
+}
+
+.rating-option-btn {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-md);
+  padding: 16px 20px;
+  font-size: 17px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 var(--color-charcoal);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rating-option-btn:hover {
+  background-color: var(--color-mint-light);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 0 var(--color-charcoal);
+}
+
+.rating-option-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--color-charcoal);
+}
+
+.rating-option-btn.selected {
+  background-color: var(--color-mint-light);
+  border-color: var(--color-mint-deep);
+  box-shadow: 0 4px 0 var(--color-mint-deep);
+}
+
+.rating-option-emoji {
+  font-size: 24px;
+}
+
+/* Thank you panel matching feedback choice */
+.feedback-thankyou-box {
+  background-color: var(--color-mint-light);
+  border: var(--border-thin);
+  border-radius: var(--br-md);
+  padding: 16px;
+  text-align: center;
+  box-shadow: 3px 3px 0 var(--color-shadow);
+  width: 100%;
+  margin-bottom: 30px;
+  font-weight: 800;
+  animation: pageSlideIn 0.3s ease forwards;
+}
+
+.rating-action-shelf {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.rating-action-shelf button {
+  flex: 1;
+}
+
+/* Toast alert notification style */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(40px);
+  background: var(--color-charcoal);
+  color: var(--color-white);
+  padding: 12px 24px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  border: var(--border-thin);
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Footer Styling */
+.footer {
+  margin-top: auto;
+  background-color: var(--color-white);
+  border-top: var(--border-thick);
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.footer-brand {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.footer-desc {
+  font-size: 12px;
+  color: var(--color-gray);
+  margin-bottom: 12px;
+}
+
+.footer-icons {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.footer-copyright {
+  font-size: 11px;
+  color: var(--color-gray);
+}
+
+/* Responsive configurations */
+@media (max-width: 768px) {
+  #app {
+    padding-bottom: 140px;
+    /* extra margin so sticky footer doesn't overlap contents */
+  }
+
+  .hamburger {
+    display: block;
+  }
+
+  .nav {
+    display: none;
+    /* hidden on mobile mobile menu triggers */
+    position: absolute;
+    top: 68px;
+    right: 24px;
+    background: var(--color-white);
+    border: var(--border-thick);
+    border-radius: var(--br-md);
+    padding: 12px;
+    flex-direction: column;
+    box-shadow: 0 6px 0 var(--color-shadow);
+  }
+
+  .nav.open {
+    display: flex;
+    animation: menuFadeIn 0.2s ease forwards;
+  }
+
+  @keyframes menuFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .footer-bar-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selected-info {
+    text-align: center;
+  }
+}
+/* Dislike Button sticker style */
+.recipe-dislike-btn {
+  position: absolute;
+  top: -16px;
+  right: 6px;
+  background-color: var(--color-orange-light);
+  color: var(--color-orange-deep);
+  border: var(--border-thick);
+  border-radius: var(--br-sm);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  z-index: 12;
+  transition: all 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+  font-family: var(--font-main);
+}
+
+.recipe-dislike-btn:hover {
+  transform: translateY(-2px) rotate(-1.5deg) scale(1.05);
+  background-color: var(--color-white);
+}
+
+.recipe-dislike-btn:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 1px 1px 0 var(--color-charcoal);
+}
+
+/* Custom Modals */
+.custom-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(74, 62, 61, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.custom-modal-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.custom-modal-content {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  box-shadow: 0 10px 0 var(--color-shadow);
+  width: 90%;
+  max-width: 380px;
+  padding: 24px;
+  position: relative;
+  transform: translateY(20px);
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+}
+
+.custom-modal-overlay.show .custom-modal-content {
+  transform: translateY(0);
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--color-gray);
+  line-height: 1;
+}
+
+.modal-emoji {
+  font-size: 40px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.modal-subtitle {
+  font-size: 12px;
+  color: var(--color-gray);
+  text-align: center;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.modal-combos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 16px;
+}
+
+.combo-item {
+  background-color: var(--color-cream-light);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 10px;
+}
+
+.combo-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-orange-deep);
+  margin-bottom: 2px;
+}
+
+.combo-desc {
+  font-size: 11px;
+  color: var(--color-charcoal);
+  line-height: 1.4;
+}
+
+/* ==================== 8. YORI DOGAM (COOK BOOK) ==================== */
+.book-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+  animation: pageSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15) forwards;
+}
+
+.book-progress-wrapper {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-lg);
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 0 var(--color-shadow);
+}
+
+.book-progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+  margin-bottom: 8px;
+}
+
+.book-progress-text strong {
+  color: var(--color-orange);
+}
+
+.book-progress-bar-bg {
+  width: 100%;
+  height: 16px;
+  background-color: var(--color-cream-dark);
+  border: var(--border-thin);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.book-progress-bar-fill {
+  height: 100%;
+  background-color: var(--color-mint);
+  border-radius: 99px;
+  transition: width 0.6s ease;
+}
+
+.book-section-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+  margin-bottom: 12px;
+  border-left: 4px solid var(--color-orange);
+  padding-left: 8px;
+  text-align: left;
+}
+
+.book-favorites-section {
+  margin-bottom: 24px;
+}
+
+.book-favorites-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 4px 12px 4px;
+}
+
+.book-empty-text {
+  font-size: 12px;
+  color: var(--color-gray);
+  background-color: var(--color-gray-light);
+  border: 1.5px dashed var(--color-gray);
+  border-radius: var(--br-sm);
+  padding: 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .book-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.book-recipe-card {
+  background-color: var(--color-white);
+  border: var(--border-thick);
+  border-radius: var(--br-md);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 4px 0 var(--color-shadow);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+  min-height: 120px;
+}
+
+.book-recipe-card.discovered {
+  cursor: pointer;
+}
+
+.book-recipe-card.discovered:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 8px 0 var(--color-shadow);
+  background-color: #FFFDF9;
+}
+
+.book-recipe-card.undiscovered {
+  filter: grayscale(1) opacity(0.55);
+  background-color: #F0EDE9;
+  border-style: dashed;
+}
+
+.book-card-emoji {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.book-card-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+  margin-bottom: 4px;
+}
+
+.book-card-count {
+  font-size: 10px;
+  font-weight: 800;
+  background-color: var(--color-mint-light);
+  color: var(--color-mint-deep);
+  border-radius: 99px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-mint);
+  white-space: nowrap;
+}
+
+.book-card-hint {
+  font-size: 10px;
+  color: var(--color-gray);
+  margin-top: 4px;
+  font-weight: 800;
+}
+
+.book-badge {
+  position: absolute;
+  top: -8px;
+  left: 8px;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--color-charcoal);
+  color: var(--color-white);
+  box-shadow: 1px 1px 0 var(--color-charcoal);
+}
+
+.badge-normal {
+  background-color: var(--color-mint);
+}
+
+.badge-alt {
+  background-color: var(--color-orange);
+}
+
+.badge-locked {
+  background-color: var(--color-gray);
+}
+
+/* ==================== 9. CONVENIENCE RECEIPT STYLES ==================== */
+.receipt-paper {
+  background-color: var(--color-white);
+  border: 2px solid var(--color-charcoal);
+  border-radius: var(--br-sm);
+  box-shadow: 4px 4px 0 var(--color-shadow);
+  max-width: 330px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Courier New', Courier, monospace; /* Monospace for realistic receipt! */
+  color: #333;
+}
+
+.receipt-store-logo {
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--color-mint-deep);
+  margin-bottom: 2px;
+}
+
+.receipt-title {
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 1px;
+  color: var(--color-charcoal);
+  margin-bottom: 6px;
+}
+
+.receipt-date {
+  font-size: 10px;
+  text-align: center;
+  color: var(--color-gray);
+  margin-bottom: 8px;
+}
+
+.receipt-divider {
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-gray);
+  letter-spacing: -1px;
+  margin: 4px 0;
+  user-select: none;
+}
+
+.receipt-table-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin: 4px 0;
+}
+
+.receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-orange-deep);
+  padding: 4px 0;
+}
+
+.receipt-tips {
+  margin-top: 14px;
+  font-family: var(--font-main);
+  background-color: var(--color-cream-light);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 10px;
+  text-align: left;
+}
+
+.tips-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-charcoal);
+  margin-bottom: 4px;
+}
+
+.tips-list {
+  font-size: 10px;
+  color: var(--color-charcoal);
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.receipt-barcode-box {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.receipt-barcode {
+  width: 140px;
+  height: 32px;
+  background: repeating-linear-gradient(
+    90deg,
+    #333,
+    #333 2px,
+    transparent 2px,
+    transparent 5px,
+    #333 5px,
+    #333 8px,
+    transparent 8px,
+    transparent 10px
+  );
+}
+
+.receipt-barcode-num {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--color-gray);
+  margin-top: 2px;
+}
