@@ -2468,12 +2468,23 @@ h4 {
   position: relative;
 }
 
+#shopping-modal .custom-modal-content {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
 .shopping-checklist {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 4px; /* 체크박스 아이템의 우측 하단 그림자가 잘리지 않도록 미세 패딩 부여 */
 }
 
 .shopping-item {
@@ -2790,6 +2801,55 @@ h4 {
   100% {
     transform: translate(var(--dx), var(--dy)) scale(0.95) rotate(var(--rot));
     opacity: 0;
+  }
+}
+
+/* 촥 넘겨지는 손맛 캐러셀 & 책 펼침 입체 애니메이션 추가 */
+
+/* 1. 우측에서 좌측으로 샥 밀려오며 안착 (Next 클릭 시) */
+.recipe-card-box.slide-in-right {
+  animation: slideInRight 0.38s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+@keyframes slideInRight {
+  0% {
+    transform: translateX(35px) rotate(2.5deg) scale(0.96);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* 2. 좌측에서 우측으로 샥 밀려오며 안착 (Prev 클릭 시) */
+.recipe-card-box.slide-in-left {
+  animation: slideInLeft 0.38s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+@keyframes slideInLeft {
+  0% {
+    transform: translateX(-35px) rotate(-2.5deg) scale(0.96);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* 3. 3D 입체 책 펼침 트랜지션 (레시피 북 상세 보기 진입 시) */
+.notebook-book {
+  animation: bookSpreadOpen 0.52s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+  transform-origin: center center;
+  perspective: 1000px;
+}
+@keyframes bookSpreadOpen {
+  0% {
+    transform: scale(0.96) rotateY(12deg) translateY(5px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotateY(0deg) translateY(0);
+    opacity: 1;
   }
 }
 

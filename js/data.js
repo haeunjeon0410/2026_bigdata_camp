@@ -12,84 +12,150 @@ const RAW_RECIPES = `name,category,ingredients,cook_time,difficulty,steps,emoji,
 볶음우동,면류,"우동면, 양배추, 당근, 굴소스, 식용유",15,쉬움,1. 우동면을 끓는 물에 살짝 데친다. | 2. 채소를 팬에 볶는다. | 3. 면을 넣고 굴소스로 간한다. | 4. 골고루 볶아 완성한다.,🍜,통통하고 쫄깃한 우동 면발에 짭조름한 감칠맛의 굴소스를 더해 볶아내면 훌륭한 별미가 됩니다.,"['🥬', '🍜', '🥫', '🥢']"
 우동,면류,"우동면, 다시다, 대파, 간장",15,쉬움,1. 물에 다시다를 풀어 육수를 끓인다. | 2. 간장으로 간을 맞춘다. | 3. 우동면을 넣고 끓인다. | 4. 썬 대파를 올려 완성한다.,🍜,깊고 따끈한 국물에 쫄깃한 면발을 후루룩 들이켜며 추운 날 온몸을 녹이기 좋습니다.,"['🍲', '🍜', '🧅', '🥢']"
 잔치국수,면류,"국수, 다시다, 대파, 간장, 계란",20,보통,1. 다시다로 육수를 끓인다. | 2. 국수를 따로 삶아 찬물에 헹군다. | 3. 그릇에 면을 담고 뜨거운 육수를 붓는다. | 4. 지단과 대파를 고명으로 올려 완성한다.,🍜,깔끔하고 시원한 멸치 육수에 삶은 소면과 고명을 가득 얹어 든든하고 따뜻하게 속을 달래줍니다.,"['🍲', '🍜', '🥚', '🍽️']"
-비빔국수,면류,"국수, 고추장, 식초, 설탕, 오이",15,쉬움,1. 국수를 삶아 찬물에 헹군다. | 2. 고추장 양념장을 만든다. | 3. 국수와 양념장을 비빈다. | 4. 오이를 채썰어 올려 완성한다.,🍜,매콤, 달콤, 새콤한 삼박자가 어우러진 양념장에 슥슥 비벼 한 그릇 뚝딱 비워내기 좋은 면 요리입니다.,"['🍜', '🌶️', '🥬', '🥚']"
+비빔국수,면류,"국수, 고추장, 식초, 설탕, 오이",15,쉬움,1. 국수를 삶아 찬물에 헹군다. | 2. 고추장 양념장을 만든다. | 3. 국수와 양념장을 비빈다. | 4. 오이를 채썰어 올려 완성한다.,🍜,"매콤, 달콤, 새콤한 삼박자가 어우러진 양념장에 슥슥 비벼 한 그릇 뚝딱 비워내기 좋은 면 요리입니다.","['🍜', '🌶️', '🥬', '🥚']"
 김치찌개,국·찌개,"김치, 돼지고기, 두부, 대파, 고춧가루",25,쉬움,1. 돼지고기와 김치를 볶는다. | 2. 물을 붓고 끓인다. | 3. 두부와 대파를 넣는다. | 4. 고춧가루로 간을 맞춰 완성한다.,🍲,푹 익은 김치에서 우러나온 칼칼하고 깊은 국물 맛이 밥 한 공기를 순식간에 비우게 만들어요.,"['🥬', '🥩', '🔥', '🍲']"
 된장찌개,국·찌개,"된장, 두부, 애호박, 감자, 양파",20,쉬움,"1. 물에 된장을 풀어준다. | 2. 감자, 양파, 애호박을 넣고 끓인다. | 3. 두부를 넣고 한소끔 더 끓인다. | 4. 간을 맞춰 완성한다.",🍲,구수하고 깊은 된장 육수에 두부와 채소를 가득 넣어 정겨운 집밥의 따뜻함을 느낄 수 있어요.,"['🍲', '🥔', '🧅', '🧀']"
 순두부찌개,국·찌개,"순두부, 고춧가루, 대파, 마늘, 계란",20,보통,1. 고춧가루와 마늘을 볶아 양념을 만든다. | 2. 물을 붓고 순두부를 넣어 끓인다. | 3. 계란을 풀어 넣는다. | 4. 대파를 올려 완성한다.,🍲,부드럽고 몽글몽글한 순두부와 칼칼한 양념이 만나 속을 뜨끈하고 개운하게 풀어줍니다.,"['🌶️', '🥚', '🍲', '🍽️']"
-부대찌개,국·찌개,"스팸, 김치, 소시지, 고춧가루, 대파",25,보통,"1. 냄비에 김치와 스팸, 소시지를 넣는다. | 2. 물과 고춧가루를 넣고 끓인다. | 3. 끓으면 대파를 넣는다. | 4. 한소끔 더 끓여 완성한다.",🍲,다양한 햄, 소시지, 라면사리가 얼큰한 국물과 어우러져 여럿이서 푸짐하게 즐기기 좋은 찌개예요.,"['🥩', '🍜', '🔥', '🍲']"
-미역국,국·찌개,"미역, 소고기, 참기름, 간장",30,보통,1. 불린 미역을 참기름에 볶는다. | 2. 소고기를 넣고 함께 볶는다. | 3. 물을 붓고 끓인다. | 4. 간장으로 간을 맞춰 완성한다.,🥣,부드러운 미역과 고소한 참기름 향이 오랜 시간 끓여낸 국물에 배어 속을 부드럽게 감싸줍니다.,"['🥬', '🥩', '🔥', '🥣']"
+부대찌개,국·찌개,"스팸, 김치, 소시지, 고춧가루, 대파",25,보통,"1. 냄비에 김치와 스팸, 소시지를 넣는다. | 2. 물과 고춧가루를 넣고 끓인다. | 3. 끓으면 대파를 넣는다. | 4. 한소끔 더 끓여 완성한다.",🍲,"다양한 햄, 소시지, 라면사리가 얼큰한 국물과 어우러져 여럿이서 푸짐하게 즐기기 좋은 찌개예요.","['🥩', '🍜', '🔥', '🍲']"
+미역국,국·찌개,"미역, 소고기, 참기름, 간장",30,보통,1. 불린 미역을 참기름에 볶는다. | 2. 소고기를 넣고 함께 볶는다. | 3. 물을 붓고 끓인다. | 4. 간장으로 간을 맞춰 완성한다.,🥣,부드럽고 몽길몽길한 미역과 고소한 참기름 향이 오랜 시간 끓여낸 국물에 배어 속을 부드럽게 감싸줍니다.,"['🥬', '🥩', '🔥', '🥣']"
 계란국,국·찌개,"계란, 대파, 다시다, 간장",10,쉬움,1. 물에 다시다를 풀어 끓인다. | 2. 간장으로 간을 맞춘다. | 3. 풀어둔 계란을 천천히 부어준다. | 4. 대파를 올려 완성한다.,🥣,맑고 깔끔한 국물에 부드러운 계란이 몽실몽실 피어나 매콤한 음식과 함께 곁들이기 환상적입니다.,"['🍲', '🥚', '🧅', '🥣']"
 햄야채볶음,메인요리,"스팸, 양파, 당근, 양배추, 굴소스",15,쉬움,1. 스팸과 채소를 먹기 좋게 썬다. | 2. 팬에 스팸을 먼저 볶는다. | 3. 채소를 넣고 함께 볶는다. | 4. 굴소스로 간을 맞춰 완성한다.,🍳,짭조름한 햄과 아삭한 채소들을 굴소스나 케첩에 볶아내어 훌륭한 밥반찬이나 맥주 안주로 제격이에요.,"['🥩', '🥕', '🍳', '🍽️']"
 계란말이,반찬·간편식,"계란, 당근, 대파, 소금",15,쉬움,1. 계란을 풀고 다진 채소와 소금을 섞는다. | 2. 팬에 얇게 부어 돌돌 말아준다. | 3. 이 과정을 반복해 층을 쌓는다. | 4. 한 김 식힌 뒤 썰어 완성한다.,🍳,돌돌 말아 구워낸 노란 계란말이는 푹신하고 부드러워 어떤 상차림에도 잘 어울리는 국민 반찬입니다.,"['🥚', '🧅', '🍳', '🍽️']"
 감자볶음,반찬·간편식,"감자, 당근, 양파, 식용유, 소금",15,쉬움,1. 감자와 당근을 채썬다. | 2. 팬에 기름을 두르고 감자를 먼저 볶는다. | 3. 당근과 양파를 넣고 함께 볶는다. | 4. 소금으로 간을 맞춰 완성한다.,🥔,얇게 썬 감자를 고소한 기름에 볶아내어 아삭함과 쫀득함을 동시에 느낄 수 있는 담백한 반찬입니다.,"['🥔', '🧅', '🍳', '🍽️']"
 토스트,반찬·간편식,"식빵, 계란, 설탕, 식용유",10,쉬움,1. 계란과 채소를 섞어 계란물을 만든다. | 2. 팬에 계란물을 부쳐 얇게 만든다. | 3. 식빵 사이에 끼운다. | 4. 취향에 따라 설탕을 뿌려 완성한다.,🥪,버터에 노릇하게 구운 식빵에 계란과 잼을 곁들여 바쁜 아침 시간에 기분 좋은 에너지를 충전하세요.,"['🍞', '🍳', '🧈', '🥪']"
-샌드위치,반찬·간편식,"식빵, 계란, 양배추, 마요네즈",15,쉬움,1. 계란을 삶아 으깬 뒤 마요네즈와 섞는다. | 2. 양배추를 채썰어 준비한다. | 3. 식빵에 계란 샐러드와 양배추를 올린다. | 4. 다른 식빵으로 덮어 완성한다.,🥪,신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.,"['🍞', '🥩', '🥬', '🥪']"`;
+샌드위치,반찬·간편식,"식빵, 계란, 양배추, 마요네즈",15,쉬움,1. 계란을 삶아 으깬 뒤 마요네즈와 섞는다. | 2. 양배추를 채썰어 준비한다. | 3. 식빵에 계란 샐러드와 양배추를 올린다. | 4. 다른 식빵으로 덮어 완성한다.,🥪,"신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.","['🍞', '🥩', '🥬', '🥪']"`;
 
 function parseCsvLine(line) {
   const fields = [];
-  let value = '', quoted = false;
+  let value = "",
+    quoted = false;
   for (let i = 0; i < line.length; i += 1) {
     const char = line[i];
     if (char === '"') quoted = !quoted;
-    else if (char === ',' && !quoted) { fields.push(value); value = ''; }
-    else value += char;
+    else if (char === "," && !quoted) {
+      fields.push(value);
+      value = "";
+    } else value += char;
   }
   fields.push(value);
   return fields;
 }
 
-const csvLines = RAW_RECIPES.split('\n');
+const csvLines = RAW_RECIPES.split("\n");
 const headers = parseCsvLine(csvLines[0]);
 const csvRows = csvLines.slice(1).map((line) => {
   const values = parseCsvLine(line);
-  return Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
+  return Object.fromEntries(
+    headers.map((header, index) => [header, values[index] || ""]),
+  );
 });
 
-const ingredientNames = [...new Set(csvRows.flatMap((row) => row.ingredients.split(', ')))];
-const ingredientEmoji = { 계란: '🥚', 감자: '🥔', 당근: '🥕', 대파: '🌿', 마늘: '🧄', 양배추: '🥬', 양파: '🧅', 밥: '🍚', 식빵: '🍞' };
+const ingredientNames = [
+  ...new Set(csvRows.flatMap((row) => row.ingredients.split(", "))),
+];
+const ingredientEmoji = {
+  계란: "🥚",
+  우유: "🥛",
+  치즈: "🧀",
+  감자: "🥔",
+  양파: "🧅",
+  토마토: "🍅",
+  양배추: "🥬",
+  당근: "🥕",
+  브로콜리: "🥦",
+  마늘: "🧄",
+  고추: "🌶️",
+  버섯: "🍄",
+  대파: "🌿",
+  베이컨: "🥓",
+  밥: "🍚",
+  식빵: "🍞",
+  부침가루: "🌾",
+  식용유: "🧴",
+  간장: "🫙",
+  케첩: "🥫",
+  돼지고기: "🥩",
+  굴소스: "🧉",
+  카레가루: "🍛",
+  국수: "🍜",
+  고추장: "🌶️",
+  식초: "🫙",
+  설탕: "🍬",
+  오이: "🥒",
+  스파게티면: "🍝",
+  올리브유: "🫒",
+  소금: "🧂",
+  후추: "🧂",
+  토마토소스: "🥫",
+  우동면: "🍜",
+  다시다: "🧉",
+  김치: "🌶️",
+  두부: "⬜",
+  고춧가루: "🌶️",
+  된장: "🤎",
+  애호박: "🥒",
+  순두부: "🥚",
+  스팸: "🥫",
+  소시지: "🌭",
+  미역: "🌿",
+  소고기: "🥩",
+  참기름: "🫙",
+  마요네즈: "🧴"
+};
 const ingredientCategory = (name) => {
-  if (['계란', '두부', '순두부', '마요네즈'].includes(name)) return 'dairy';
-  if (['돼지고기', '소고기', '소시지', '스팸'].includes(name)) return 'meat';
-  if (['밥', '국수', '스파게티면', '우동면', '식빵'].includes(name)) return 'grain';
-  return 'vegetable';
+  if (["계란", "두부", "순두부", "마요네즈"].includes(name)) return "dairy";
+  if (["돼지고기", "소고기", "소시지", "스팸"].includes(name)) return "meat";
+  if (["밥", "국수", "스파게티면", "우동면", "식빵"].includes(name))
+    return "grain";
+  return "vegetable";
 };
 
 // CSV의 설명문에 포함된 쉼표가 따옴표 처리되지 않은 행을 보정합니다.
 const rowFixes = {
   비빔국수: {
-    aiReason: '매콤, 달콤, 새콤한 삼박자가 어우러진 양념장에 슥슥 비벼 한 그릇 뚝딱 비워내기 좋은 면 요리입니다.',
-    cookingSequence: ['🍜', '🌶️', '🥬', '🥚']
+    aiReason:
+      "매콤, 달콤, 새콤한 삼박자가 어우러진 양념장에 슥슥 비벼 한 그릇 뚝딱 비워내기 좋은 면 요리입니다.",
+    cookingSequence: ["🍜", "🌶️", "🥬", "🥚"],
   },
   부대찌개: {
-    aiReason: '다양한 햄, 소시지, 라면사리가 얼큰한 국물과 어우러져 여럿이서 푸짐하게 즐기기 좋은 찌개예요.',
-    cookingSequence: ['🥩', '🍜', '🔥', '🍲']
+    aiReason:
+      "다양한 햄, 소시지, 라면사리가 얼큰한 국물과 어우러져 여럿이서 푸짐하게 즐기기 좋은 찌개예요.",
+    cookingSequence: ["🥩", "🍜", "🔥", "🍲"],
   },
   샌드위치: {
-    aiReason: '신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.',
-    cookingSequence: ['🍞', '🥩', '🥬', '🥪']
-  }
+    aiReason:
+      "신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.",
+    cookingSequence: ["🍞", "🥩", "🥬", "🥪"],
+  },
 };
 
 export const INGREDIENTS = ingredientNames.map((name, index) => ({
-  id: `i${String(index + 1).padStart(2, '0')}`,
+  id: `i${String(index + 1).padStart(2, "0")}`,
   name,
-  emoji: ingredientEmoji[name] || '🥕',
-  category: ingredientCategory(name)
+  emoji: ingredientEmoji[name] || "🥕",
+  category: ingredientCategory(name),
 }));
 
 export const CATEGORIES = {
-  all: { name: '전체', emoji: '✨' },
-  dairy: { name: '유제품·달걀', emoji: '🥚' },
-  vegetable: { name: '채소·과일', emoji: '🥦' },
-  meat: { name: '고기·가공품', emoji: '🥓' },
-  grain: { name: '곡류·식사', emoji: '🍞' }
+  all: { name: "전체", emoji: "✨" },
+  dairy: { name: "유제품·달걀", emoji: "🥚" },
+  vegetable: { name: "채소·과일", emoji: "🥦" },
+  meat: { name: "고기·가공품", emoji: "🥓" },
+  grain: { name: "곡류·식사", emoji: "🍞" },
 };
 
 export const RECIPES = csvRows.map((row, index) => {
   const fix = rowFixes[row.name] || {};
-  const ingredients = row.ingredients.split(', ');
-  const steps = row.steps.split(' | ').map((step) => step.replace(/^\d+\.\s*/, ''));
-  const cookingSequence = fix.cookingSequence || row.cookingSequence.match(/["']([^"']+)["']/g)?.map((item) => item.slice(1, -1)) || [];
+  const ingredients = row.ingredients.split(", ");
+  const steps = row.steps
+    .split(" | ")
+    .map((step) => step.replace(/^\d+\.\s*/, ""));
+  const cookingSequence =
+    fix.cookingSequence ||
+    row.cookingSequence
+      .match(/["']([^"']+)["']/g)
+      ?.map((item) => item.slice(1, -1)) ||
+    [];
   return {
     id: `r${index + 1}`,
     name: row.name,
@@ -97,19 +163,211 @@ export const RECIPES = csvRows.map((row, index) => {
     emoji: row.emoji,
     difficulty: row.difficulty,
     time: `${row.cook_time}분`,
-    need: ingredients.map((name) => INGREDIENTS.find((ingredient) => ingredient.name === name)?.id).filter(Boolean),
+    need: ingredients
+      .map(
+        (name) =>
+          INGREDIENTS.find((ingredient) => ingredient.name === name)?.id,
+      )
+      .filter(Boolean),
     missing: [],
     aiReason: fix.aiReason || row.aiReason,
     ingredients,
     steps,
-    cookingSequence
+    cookingSequence,
   };
 });
 
-export const ALTERNATIVE_RECIPES = [];
+export const ALTERNATIVE_RECIPES = [
+  {
+    id: "alt1",
+    name: "마크정식",
+    emoji: "🍝",
+    difficulty: "쉬움",
+    time: "10분",
+    need: ["cheese"],
+    missing: ["자이언트 떡볶이", "콕콕콕 스파게티", "프랑크 소시지"],
+    aiReason:
+      "편의점 마니아라면 모를 수 없는 그 레시피! 극락의 단짠 조합입니다.",
+    ingredients: [
+      "자이언트 떡볶이 1개",
+      "콕콕콕 스파게티 1개",
+      "프랑크 소시지 1개",
+      "스트링 치즈 1~2개",
+    ],
+    steps: [
+      "자이언트 떡볶이를 조리법대로 끓이고, 스파게티 컵라면은 면만 익혀 스프를 넣고 비벼줍니다.",
+      "떡볶이 용기에 조리된 스파게티 면과 소스를 쏟아붓고 섞어줍니다.",
+      "소시지를 한입 크기로 슬라이스해서 올리고 스트링 치즈를 찢어서 고루 얹어줍니다.",
+      "전자레인지에 약 1분 30초 돌려 치즈를 완전히 녹인 뒤 잘 저어 먹습니다.",
+    ],
+    cookingSequence: ["🍝", "🧀", "🍳", "😋"],
+    priceList: [
+      { name: "자이언트 떡볶이", price: 3200 },
+      { name: "콕콕콕 스파게티", price: 1600 },
+      { name: "프랑크 소시지", price: 2500 },
+      { name: "스트링 치즈 1개", price: 1300 },
+    ],
+    totalPrice: 8600,
+  },
+  {
+    id: "alt2",
+    name: "불닭치즈삼김밥",
+    emoji: "🍙",
+    difficulty: "쉬움",
+    time: "5분",
+    need: ["cheese", "rice"],
+    missing: ["불닭볶음면", "참치마요 삼각김밥"],
+    aiReason: "매콤한 맛과 고소한 참치마요 삼김이 만나 완벽한 한 끼가 됩니다!",
+    ingredients: [
+      "불닭볶음면 컵라면 1개",
+      "참치마요 삼각김밥 1개",
+      "스트링 치즈 1장",
+    ],
+    steps: [
+      "불닭볶음면을 익혀 물을 따라버리고 소스를 넣어 비벼줍니다.",
+      "면을 조금 남기거나 가위로 잘게 자른 뒤 참치마요 삼각김밥을 김째 부수어 넣습니다.",
+      "위에 스트링치즈를 얹은 뒤 전자레인지에 1분간 가동합니다.",
+      "치즈가 녹으면 삼각김밥과 면, 불닭 소스를 골고루 비벼 맛있게 떠먹습니다.",
+    ],
+    cookingSequence: ["🍙", "🧀", "🍳", "🌶️"],
+    priceList: [
+      { name: "불닭볶음면 컵라면", price: 1800 },
+      { name: "참치마요 삼각김밥", price: 1200 },
+      { name: "스트링 치즈 1개", price: 1300 },
+    ],
+    totalPrice: 4300,
+  },
+  {
+    id: "alt3",
+    name: "신세개 라면",
+    emoji: "🍜",
+    difficulty: "쉬움",
+    time: "8분",
+    need: ["egg", "greenonion"],
+    missing: ["라면 1봉지", "쌈장 반스푼"],
+    aiReason:
+      "집에 쌈장이 남으셨나요? 고깃집에서 먹던 깊은 구수의 극치 라면 맛이 납니다.",
+    ingredients: [
+      "국물형 신라면 1봉지",
+      "쌈장 1/2큰술",
+      "대파 약간",
+      "계란 1개",
+    ],
+    steps: [
+      "물 500ml에 라면 건더기/분말 스프와 함께 쌈장 반스푼을 풀고 물을 끓입니다.",
+      "물이 끓으면 라면 면발을 넣고 4분간 꼬들하게 끓여냅니다.",
+      "마지막 1분 전, 어슷 썬 대파와 계란을 퐁당 깨뜨려 넣어 한소끔 끓여 마무리합니다.",
+    ],
+    cookingSequence: ["🍜", "🧄", "🍳", "🔥"],
+    priceList: [
+      { name: "신라면 1봉지", price: 1000 },
+      { name: "날계란 1개", price: 500 },
+      { name: "쌈장 / 대파 (찬장재료)", price: 0 },
+    ],
+    totalPrice: 1500,
+  },
+  {
+    id: "alt4",
+    name: "치즈짜파구리",
+    emoji: "🍲",
+    difficulty: "쉬움",
+    time: "10분",
+    need: ["cheese"],
+    missing: ["신라면 1봉지", "짜파게티 1봉지"],
+    aiReason:
+      "기생충에 소개된 짜파구리에 고소한 치즈를 더해 더 걸쭉하고 맛있게 즐겨봐요.",
+    ingredients: ["짜파게티 1봉지", "신라면 1봉지", "슬라이스 노랑 치즈 2장"],
+    steps: [
+      "냄비에 물을 끓이고 짜파게티 면과 신라면 면, 후레이크를 모두 넣어 익힙니다.",
+      "면이 적당히 익으면 종이컵 1/2컵 분량의 물만 남기고 따라 냅니다.",
+      "짜장 스프 1팩과 신라면 스프 1/2팩을 넣고 약불에서 소스가 고루 배도록 볶습니다.",
+      "완성된 짜구리 위에 치즈 2장을 올린 뒤 남은 열기로 촉촉히 녹여 비벼 먹습니다.",
+    ],
+    cookingSequence: ["🍲", "🧀", "🍳", "👌"],
+    priceList: [
+      { name: "짜파게티 1봉지", price: 1200 },
+      { name: "신라면 1봉지", price: 1000 },
+      { name: "슬라이스 노란 치즈 2장", price: 1000 },
+    ],
+    totalPrice: 3200,
+  },
+  {
+    id: "alt5",
+    name: "허니버터칩 감자전",
+    emoji: "🥔",
+    difficulty: "쉬움",
+    time: "12분",
+    need: ["cheese", "bacon"],
+    missing: ["허니버터칩 1봉지"],
+    aiReason:
+      "감자 가는 게 귀찮을 때! 허니버터 감자칩으로 순식간에 달콤 바삭한 감자전을 만들어요.",
+    ingredients: [
+      "허니버터 감자칩 1봉지",
+      "피자치즈 1컵",
+      "베이컨 약간 (생략가능)",
+    ],
+    steps: [
+      "감자칩 봉지를 뜯어 감자조각을 손으로 거칠게 으깨어 줍니다.",
+      "으깬 감자칩을 볼에 고루 넣고, 치즈와 소량의 시원한 베이컨 조각을 넣고 버무립니다.",
+      "기름을 두르지 않은 팬에 버무린 감자칩 반죽을 넓적하고 두껍게 올려 약불로 굽습니다.",
+      "치즈가 녹아 감자칩들이 서로 붙으면 조심스레 뒤집어 노릇하게 양면을 마감해줍니다.",
+    ],
+    cookingSequence: ["🥔", "🧀", "🍳", "🧈"],
+    priceList: [
+      { name: "허니버터칩 감자칩", price: 1700 },
+      { name: "모짜렐라 피자 치즈", price: 1500 },
+      { name: "편의점 베이컨 약간", price: 2000 },
+    ],
+    totalPrice: 5200,
+  },
+  {
+    id: "alt6",
+    name: "컵 계란빵",
+    emoji: "🍞",
+    difficulty: "쉬움",
+    time: "7분",
+    need: ["bread", "egg", "cheese"],
+    missing: ["종이컵"],
+    aiReason:
+      "핫케이크 가루 없이 식빵 한 장과 전자레인지만으로 계란빵의 맛을 완벽 재현합니다.",
+    ingredients: [
+      "식빵 1장",
+      "계란 1개",
+      "모짜렐라 치즈 1T",
+      "소금 한 꼬집",
+      "설탕 약간",
+    ],
+    steps: [
+      "깨끗한 종이컵 내부에 식용유나 버터를 얇게 발라 달라붙음을 방지해 줍니다.",
+      "식빵을 잘게 뜯거나 가위로 네모나게 큐브 모양으로 썰어 종이컵 1/3 높이까지 담습니다.",
+      "그 위에 계란 1개를 톡 터뜨려 올리고 노른자를 이쑤시개 등으로 꼭 콕 찔러 폭발을 방지합니다.",
+      "소금과 설탕으로 간을 맞춘 뒤 치즈를 가득 얹어 전자레인지에 1분 30초~2분 돌려 줍니다.",
+    ],
+    cookingSequence: ["🍞", "🥚", "🍳", "⚡"],
+    priceList: [
+      { name: "식빵 1장 (환산가)", price: 400 },
+      { name: "날계란 1개", price: 500 },
+      { name: "피자 치즈 1T", price: 500 },
+    ],
+    totalPrice: 1400,
+  },
+];
 
-export function getIngredients() { return INGREDIENTS; }
-export function getRecipes() { return RECIPES; }
-export function getAlternativeRecipes() { return ALTERNATIVE_RECIPES; }
-export function findIngredient(ingredientId) { return INGREDIENTS.find((ingredient) => ingredient.id === ingredientId); }
-export function findRecipe(recipeId) { return [...RECIPES, ...ALTERNATIVE_RECIPES].find((recipe) => recipe.id === recipeId); }
+export function getIngredients() {
+  return INGREDIENTS;
+}
+export function getRecipes() {
+  return RECIPES;
+}
+export function getAlternativeRecipes() {
+  return ALTERNATIVE_RECIPES;
+}
+export function findIngredient(ingredientId) {
+  return INGREDIENTS.find((ingredient) => ingredient.id === ingredientId);
+}
+export function findRecipe(recipeId) {
+  return [...RECIPES, ...ALTERNATIVE_RECIPES].find(
+    (recipe) => recipe.id === recipeId,
+  );
+}
+
