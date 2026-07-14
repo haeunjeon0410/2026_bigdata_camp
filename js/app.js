@@ -813,6 +813,19 @@ function renderMyPage() {
 
   // Favorites (찜한 레시피)
   const favRecipes = all.filter(r => state.favorites.has(r.id));
+
+  // localStorage의 최근 찜한 시간(favoriteAddedAt) 기준으로 내림차순 정렬 연동
+  try {
+    const addedAtMap = JSON.parse(localStorage.getItem('favoriteAddedAt') || '{}');
+    favRecipes.sort((a, b) => {
+      const timeA = addedAtMap[a.id] ? new Date(addedAtMap[a.id]).getTime() : 0;
+      const timeB = addedAtMap[b.id] ? new Date(addedAtMap[b.id]).getTime() : 0;
+      return timeB - timeA; // 최신 찜한 시간이 더 큰 타임스탬프를 가짐 -> 내림차순 정렬
+    });
+  } catch (e) {
+    console.warn("localStorage 'favoriteAddedAt' 파싱 에러 발생:", e);
+  }
+
   const favsHtml = favRecipes.length > 0
     ? favRecipes.map(r => {
       const isCooked = (state.cookedCounts[r.id] || 0) > 0;
