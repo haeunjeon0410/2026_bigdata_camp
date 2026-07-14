@@ -38,6 +38,8 @@ export const state = {
 
 let cookingIntervalId = null;
 let cookingTimeoutId = null;
+let normalizeSubstituteTips = () => [];
+let renderSubstituteTips = () => '';
 
 // Toast notification Helper
 export function showToast(msg) {
@@ -478,20 +480,8 @@ function renderRecipes() {
     <span class="carousel-dot ${idx === currentIdx ? 'active' : ''}" data-index="${idx}"></span>
   `).join('');
 
-  // Render missing ingredients layout
-  const missingHtml = currentRecipe.missing.length > 0
-    ? `
-      <div class="recipe-missing-box">
-        <div class="recipe-missing-title">🧾 부족한 재료 (${currentRecipe.missing.length})</div>
-        <div class="recipe-missing-items">${currentRecipe.missing.join(', ')}</div>
-      </div>
-    `
-    : `
-      <div class="recipe-missing-box" style="border-color: var(--color-mint); border-left-color: var(--color-mint); background-color: var(--color-mint-light);">
-        <div class="recipe-missing-title" style="color: var(--color-mint-deep)">✨ 완벽해요!</div>
-        <div class="recipe-missing-items" style="color: var(--color-mint-deep)">필요한 재료가 모두 준비되어 있어요!</div>
-      </div>
-    `;
+  const missingHtml = renderMissingIngredientsGuidance(currentRecipe);
+
 
   return `
     <div class="recipes-container">
@@ -550,6 +540,57 @@ function renderRecipes() {
   `;
 }
 
+function escapeHtmlForUi(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderMissingIngredientsGuidance(recipe) {
+  const missing = Array.isArray(recipe?.missing) ? recipe.missing : [];
+  const tips = normalizeSubstituteTips(recipe);
+  const normalize = (value) => String(value ?? '').trim().toLowerCase();
+  const applicableTips = tips.filter((tip) =>
+    missing.some((ingredient) => normalize(ingredient) === normalize(tip.original))
+  );
+  const substituteOriginals = new Set(applicableTips.map((tip) => normalize(tip.original)));
+  const unresolved = missing.filter((ingredient) => !substituteOriginals.has(normalize(ingredient)));
+
+  if (missing.length === 0) {
+    return `
+      <div class="recipe-missing-box" style="border-color: var(--color-mint); border-left-color: var(--color-mint); background-color: var(--color-mint-light);">
+        <div class="recipe-missing-title" style="color: var(--color-mint-deep)">✨ 완벽해요!</div>
+        <div class="recipe-missing-items" style="color: var(--color-mint-deep)">필요한 재료가 모두 준비되어 있어요!</div>
+      </div>
+    `;
+  }
+
+  if (applicableTips.length > 0) {
+    const substitutions = applicableTips.map((tip) =>
+      `${escapeHtmlForUi(tip.original)} 대신 ${tip.alternatives.map(escapeHtmlForUi).join(', ')}를 사용해보세요.`
+    );
+    if (unresolved.length > 0) {
+      substitutions.push(`여전히 필요한 재료: ${unresolved.map(escapeHtmlForUi).join(', ')}`);
+    }
+    return `
+      <div class="recipe-missing-box">
+        <div class="recipe-missing-title">💡 대체 재료로 만들 수 있어요!</div>
+        <div class="recipe-missing-items">${substitutions.join('<br>')}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="recipe-missing-box">
+      <div class="recipe-missing-title">🛒 재료가 조금 부족해요!</div>
+      <div class="recipe-missing-items">${missing.map(escapeHtmlForUi).join(', ')}</div>
+    </div>
+  `;
+}
+
 /* ==================== 4. RECIPE DETAIL SCREEN RENDER ==================== */
 function renderDetail(id) {
   // Find in normal recipes or alternatives
@@ -569,6 +610,8 @@ function renderDetail(id) {
     : state.detailBackRecipeView === 'carousel'
       ? '◀ 추천 캐러셀'
       : '◀ 레시피';
+
+  const substituteTipsHtml = renderSubstituteTips(recipe);
 
   // Draw Grocery Receipt for convenience store combo
   if (isAlt) {
@@ -624,6 +667,7 @@ function renderDetail(id) {
           </div>
         </div>
         
+        ${substituteTipsHtml}
         <div class="detail-actions-tray" style="margin-top:20px; display:flex; justify-content:center;">
           <button class="btn btn-primary" id="btn-start-cooking" data-recipe-id="${recipe.id}" style="flex: none; max-width: 280px; width: 100%;">
             이 조합 조리 시작! 💸
@@ -685,6 +729,7 @@ function renderDetail(id) {
              </div>
           </div>
           
+          ${substituteTipsHtml}
           <!-- Steps Memo Pad -->
           <div class="notebook-notepad">
             <h4 class="notepad-title">👩🍳 주방 순서</h4>
@@ -1026,8 +1071,6 @@ document.addEventListener('DOMContentLoaded', () => {
   navigate('home');
 });
 
-
-
 /* ==================== 🐰 DEVELOPER CREDITS EASTER EGG MODAL ==================== */
 export function showCreditsModal() {
   let modal = document.getElementById('credits-modal');
@@ -1120,6 +1163,8 @@ Promise.all([
   favoriteMod,
   shoppingMod
 ]) => {
+  normalizeSubstituteTips = recipeMod.normalizeSubstituteTips || (() => []);
+  renderSubstituteTips = recipeMod.renderSubstituteTips || (() => '');
   ingredientMod.initIngredient();
   recommendMod.initRecommend();
   recipeMod.initRecipe();
