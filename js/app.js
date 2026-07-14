@@ -56,14 +56,10 @@ export function navigate(route, param) {
   }
   if (route === 'detail') {
     state.currentDetail = param;
-    // Track previous screen before entering detail view
-    if (state.route === 'recipes' || state.route === 'mypage') {
+    // 오직 상세 카드 외부에서 처음 진입하는 순간에만 최초 진입 경로를 기억하여 유실되지 않도록 잠금 보존합니다.
+    if (state.route !== 'detail') {
       state.detailBackRoute = state.route;
-      // 레시피 탭 복귀 시에는 캐러셀 대신 항상 격자 전체 메뉴 탭('menu')으로 귀환하도록 강제 고정
-      state.detailBackRecipeView = state.route === 'recipes' ? 'menu' : null;
-    } else {
-      state.detailBackRoute = 'recipes';
-      state.detailBackRecipeView = 'menu';
+      state.detailBackRecipeView = state.route === 'recipes' ? state.recipeViewMode : null;
     }
   }
 
