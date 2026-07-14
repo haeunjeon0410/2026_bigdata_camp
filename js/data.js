@@ -156,21 +156,12 @@ export const RECIPES = csvRows.map((row, index) => {
       .match(/["']([^"']+)["']/g)
       ?.map((item) => item.slice(1, -1)) ||
     [];
-  const cookTimeVal = parseInt(row.cook_time, 10);
-  const ingredCount = ingredients.length;
-  let computedDifficulty = "보통";
-  if (cookTimeVal >= 20 && ingredCount >= 5) {
-    computedDifficulty = "어려움";
-  } else if (cookTimeVal <= 15 && ingredCount <= 4) {
-    computedDifficulty = "쉬움";
-  }
-
   return {
     id: `r${index + 1}`,
     name: row.name,
     category: row.category,
     emoji: row.emoji,
-    difficulty: computedDifficulty,
+    difficulty: row.difficulty,
     time: `${row.cook_time}분`,
     need: ingredients
       .map(
