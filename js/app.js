@@ -7,6 +7,8 @@ export const state = {
   activeCategory: 'all',
   favorites: new Set(),
   route: 'home',
+  // 메뉴바 레시피 탭과 냉장고에서 진입한 추천 캐러셀을 구분합니다.
+  recipeViewMode: 'menu', // 'menu' | 'carousel'
 
   // Refrigerator open state
   isFridgeOpen: false,
@@ -22,6 +24,7 @@ export const state = {
   // Detail page param
   currentDetail: null,
   detailBackRoute: 'recipes', // track where we came from ('recipes' or 'mypage')
+  detailBackRecipeView: 'menu', // detail 진입 전 레시피 화면 ('menu' | 'carousel')
 
   // Cooking Flow Parameters
   cookingRecipeId: null,
@@ -56,8 +59,11 @@ export function navigate(route, param) {
     // Track previous screen before entering detail view
     if (state.route === 'recipes' || state.route === 'mypage') {
       state.detailBackRoute = state.route;
+      // 레시피 탭 복귀 시에는 캐러셀 대신 항상 격자 전체 메뉴 탭('menu')으로 귀환하도록 강제 고정
+      state.detailBackRecipeView = state.route === 'recipes' ? 'menu' : null;
     } else {
       state.detailBackRoute = 'recipes';
+      state.detailBackRecipeView = 'menu';
     }
   }
 
@@ -121,14 +127,30 @@ export function navigate(route, param) {
 }
 
 // Update sorted carousel recipe lists relative to selections
+function calculateMissingIngredients(recipe) {
+  // 편의점 레시피는 need가 대표 재료 ID만 가지고 있어 기존 상세 missing 목록을 사용합니다.
+  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing) && recipe.missing.length) {
+    return [...recipe.missing];
+  }
+
+  const need = recipe.need || [];
+  return need
+    .map((ingredientId, index) => state.selected.has(ingredientId)
+      ? null
+      : recipe.ingredients?.[index] || recipe.missing?.[index] || ingredientId)
+    .filter(Boolean);
+}
+
 export function updateCarouselRecipes() {
   // If showing alternatives, pull from ALTERNATIVE_RECIPES database
   const sourcePool = state.showingAlternatives ? ALTERNATIVE_RECIPES : RECIPES;
   const list = [...sourcePool].map(r => {
-    const total = r.need.length;
-    const matched = r.need.filter(id => state.selected.has(id)).length;
+    const need = r.need || [];
+    const total = need.length;
+    const missing = calculateMissingIngredients(r);
+    const matched = need.filter(id => state.selected.has(id)).length;
     const rate = total === 0 ? 0 : Math.round((matched / total) * 100);
-    return { ...r, matched, total, rate };
+    return { ...r, missing, matched, total, rate };
   });
 
   // Sort: highest match rate first. If match rate is equal, sort by cooking time
@@ -140,6 +162,7 @@ export function updateCarouselRecipes() {
 document.addEventListener('click', (e) => {
   const navEl = e.target.closest('[data-nav]');
   if (navEl) {
+    if (navEl.dataset.nav === 'recipes') state.recipeViewMode = 'menu';
     navigate(navEl.dataset.nav);
   }
 
@@ -530,7 +553,11 @@ function renderDetail(id) {
   if (!recipe) return `<p style="text-align:center; padding: 40px;">레시피 정보가 올바르지 않아요.</p>`;
 
   // Dynamic back button text based on tracking state
-  const backLabel = state.detailBackRoute === 'mypage' ? '◀ 마이페이지' : '◀ 추천 목록';
+  const backLabel = state.detailBackRoute === 'mypage'
+    ? '◀ 마이페이지'
+    : state.detailBackRecipeView === 'carousel'
+      ? '◀ 추천 캐러셀'
+      : '◀ 레시피';
 
   // Draw Grocery Receipt for convenience store combo
   if (isAlt) {
@@ -596,15 +623,16 @@ function renderDetail(id) {
   }
 
   // Calculate matching stats
-  const total = recipe.need.length;
-  const matched = recipe.need.filter(mid => state.selected.has(mid)).length;
+  const total = (recipe.need || []).length;
+  const missing = calculateMissingIngredients(recipe);
+  const matched = (recipe.need || []).filter(id => state.selected.has(id)).length;
   const rate = total === 0 ? 0 : Math.round((matched / total) * 100);
 
   const isFav = state.favorites.has(recipe.id);
 
   // Missing ingreds
-  const missingLabel = recipe.missing.length > 0
-    ? recipe.missing.join(', ')
+  const missingLabel = missing.length > 0
+    ? missing.join(', ')
     : '부족한 재료 없음';
 
   return `

@@ -34,6 +34,9 @@ export function initRecipe() {
     }
 
     if (event.target.closest('#btn-detail-back')) {
+      if (state.detailBackRoute === 'recipes' && state.detailBackRecipeView) {
+        state.recipeViewMode = state.detailBackRecipeView;
+      }
       navigate(state.detailBackRoute || 'recipes');
       return;
     }

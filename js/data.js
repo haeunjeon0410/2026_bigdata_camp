@@ -94,44 +94,96 @@ const rowFixes = {
 // 일반 레시피용 대체 재료 매핑 데이터 (10개 이상의 레시피에 매핑 처리)
 const recipeSubstituteTips = {
   감자전: [
-    { original: "부침가루", alternatives: ["밀가루", "전분가루"], note: "전분가루를 쓰면 더 쫄깃해져요." }
+    {
+      original: "부침가루",
+      alternatives: ["밀가루", "전분가루"],
+      note: "전분가루를 쓰면 더 쫄깃해져요.",
+    },
   ],
   볶음밥: [
-    { original: "간장", alternatives: ["굴소스", "소금"], note: "굴소스를 넣으면 감칠맛이 살아납니다." }
+    {
+      original: "간장",
+      alternatives: ["굴소스", "소금"],
+      note: "굴소스를 넣으면 감칠맛이 살아납니다.",
+    },
   ],
   오므라이스: [
-    { original: "돼지고기", alternatives: ["햄", "닭고기"], note: "햄을 잘게 썰어 넣어도 맛있습니다." }
+    {
+      original: "돼지고기",
+      alternatives: ["햄", "닭고기"],
+      note: "햄을 잘게 썰어 넣어도 맛있습니다.",
+    },
   ],
   덮밥: [
-    { original: "굴소스", alternatives: ["간장+올리고당"], note: "굴소스가 없으면 간장과 당류를 조합해보세요." }
+    {
+      original: "굴소스",
+      alternatives: ["간장+올리고당"],
+      note: "굴소스가 없으면 간장과 당류를 조합해보세요.",
+    },
   ],
   카레라이스: [
-    { original: "돼지고기", alternatives: ["닭고기", "스팸"], note: "닭가슴살을 넣으면 담백한 카레가 됩니다." }
+    {
+      original: "돼지고기",
+      alternatives: ["닭고기", "스팸"],
+      note: "닭가슴살을 넣으면 담백한 카레가 됩니다.",
+    },
   ],
   "알리오 올리오": [
-    { original: "올리브유", alternatives: ["카놀라유", "식용유"], note: "풍미는 덜하지만 일반 식용유로도 조리 가능해요." }
+    {
+      original: "올리브유",
+      alternatives: ["카놀라유", "식용유"],
+      note: "풍미는 덜하지만 일반 식용유로도 조리 가능해요.",
+    },
   ],
   토마토파스타: [
-    { original: "토마토소스", alternatives: ["케첩+간장"], note: "급할 땐 케첩에 간장을 살짝 섞어 소스를 흉내낼 수 있어요." }
+    {
+      original: "토마토소스",
+      alternatives: ["케첩+간장"],
+      note: "급할 땐 케첩에 간장을 살짝 섞어 소스를 흉내낼 수 있어요.",
+    },
   ],
   볶음우동: [
-    { original: "우동면", alternatives: ["라면사리", "칼국수면"], note: "라면사리를 삶아서 볶아도 별미입니다." }
+    {
+      original: "우동면",
+      alternatives: ["라면사리", "칼국수면"],
+      note: "라면사리를 삶아서 볶아도 별미입니다.",
+    },
   ],
   김치찌개: [
-    { original: "돼지고기", alternatives: ["참치캔", "꽁치캔"], note: "기름을 뺀 참치를 넣으면 깔끔한 참치김치찌개가 됩니다." }
+    {
+      original: "돼지고기",
+      alternatives: ["참치캔", "꽁치캔"],
+      note: "기름을 뺀 참치를 넣으면 깔끔한 참치김치찌개가 됩니다.",
+    },
   ],
   된장찌개: [
-    { original: "애호박", alternatives: ["쥬키니호박", "오이"], note: "오이를 얇게 썰어 넣어도 시원한 맛이 납니다." }
+    {
+      original: "애호박",
+      alternatives: ["쥬키니호박", "오이"],
+      note: "오이를 얇게 썰어 넣어도 시원한 맛이 납니다.",
+    },
   ],
   순두부찌개: [
-    { original: "순두부", alternatives: ["일반 모두부"], note: "일반 두부를 으깨어 넣어도 부드럽게 즐길 수 있어요." }
+    {
+      original: "순두부",
+      alternatives: ["일반 모두부"],
+      note: "일반 두부를 으깨어 넣어도 부드럽게 즐길 수 있어요.",
+    },
   ],
   부대찌개: [
-    { original: "스팸", alternatives: ["프랑크 소시지", "다진 고기"], note: "다양한 종류의 햄을 섞을수록 맛있습니다." }
+    {
+      original: "스팸",
+      alternatives: ["프랑크 소시지", "다진 고기"],
+      note: "다양한 종류의 햄을 섞을수록 맛있습니다.",
+    },
   ],
   미역국: [
-    { original: "소고기", alternatives: ["황태", "홍합", "들깨가루"], note: "황태나 들깨가루를 넣으면 구수하고 시원해요." }
-  ]
+    {
+      original: "소고기",
+      alternatives: ["황태", "홍합", "들깨가루"],
+      note: "황태나 들깨가루를 넣으면 구수하고 시원해요.",
+    },
+  ],
 };
 
 export const INGREDIENTS = ingredientNames.map((name, index) => ({
@@ -161,7 +213,11 @@ export const RECIPES = csvRows.map((row, index) => {
       .match(/["']([^"']+)["']/g)
       ?.map((item) => item.slice(1, -1)) ||
     [];
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 6aa932c (Fix: 레시피 상세 카드에서 복귀 시 메뉴판 뷰(menu) 복원 고정)
   // 형묵이의 제안을 수용하여 substituteTips 필드를 동적으로 맵핑 (없을 시 빈 배열)
   const substituteTips = recipeSubstituteTips[row.name] || [];
 
