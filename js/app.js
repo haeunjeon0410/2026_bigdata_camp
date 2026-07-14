@@ -1,5 +1,7 @@
+import { INGREDIENTS, CATEGORIES, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+
 // Initial State Management
-const state = {
+export const state = {
   selected: new Set(['egg', 'potato', 'onion']), // default selections
   search: '',
   activeCategory: 'all',
@@ -17,15 +19,19 @@ const state = {
 
   // Detail page param
   currentDetail: null,
+  detailBackRoute: 'recipes', // track where we came from ('recipes' or 'mypage')
 
   // Cooking Flow Parameters
   cookingRecipeId: null,
   cookingProgress: 0,
-  ratingFeedback: null
+  ratingFeedback: null,
+
+  // My Page Book Filter
+  mypageDifficultyFilter: 'all' // 'all', '쉬움', '보통', '어려움'
 };
 
 // Toast notification Helper
-function showToast(msg) {
+export function showToast(msg) {
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
@@ -35,10 +41,19 @@ function showToast(msg) {
 }
 
 // Router and View Changer
-function navigate(route, param) {
+export function navigate(route, param) {
+  if (route === 'detail') {
+    state.currentDetail = param;
+    // Track previous screen before entering detail view
+    if (state.route === 'recipes' || state.route === 'mypage') {
+      state.detailBackRoute = state.route;
+    } else {
+      state.detailBackRoute = 'recipes';
+    }
+  }
+
   state.route = route;
 
-  if (route === 'detail') state.currentDetail = param;
   if (route === 'recipes') {
     state.showingAlternatives = false; // Reset to match default recipes
     updateCarouselRecipes();
@@ -88,7 +103,7 @@ function navigate(route, param) {
 }
 
 // Update sorted carousel recipe lists relative to selections
-function updateCarouselRecipes() {
+export function updateCarouselRecipes() {
   // If showing alternatives, pull from ALTERNATIVE_RECIPES database
   const sourcePool = state.showingAlternatives ? ALTERNATIVE_RECIPES : RECIPES;
   const list = [...sourcePool].map(r => {
@@ -124,7 +139,7 @@ if (hamburger) {
 updateCarouselRecipes();
 
 // Global Render Manager
-function render() {
+export function render() {
   const app = document.getElementById('app');
   if (!app) return;
 
@@ -139,8 +154,8 @@ function render() {
     case 'recipes':
       html = renderRecipes();
       break;
-    case 'book':
-      html = renderBook();
+    case 'mypage':
+      html = renderMyPage();
       break;
     case 'detail':
       html = renderDetail(state.currentDetail);
@@ -159,7 +174,6 @@ function render() {
   }
 
   app.innerHTML = `<div class="page">${html}</div>`;
-  attachListeners();
 }
 
 /* ==================== 1. HOME SCREEN RENDER ==================== */
@@ -343,7 +357,7 @@ function renderRecipes() {
   if (recipes.length === 0) {
     return `
       <div class="recipes-container" style="text-align:center; padding: 60px 0;">
-        <span style="font-size: 80px; display:block; margin-bottom: 20px;">�</span>
+        <span style="font-size: 80px; display:block; margin-bottom: 20px;">🤷</span>
         <h2 class="fridge-title">아직 재료가 없어요</h2>
         <p class="fridge-subtitle" style="margin-bottom: 20px;">재료를 하나 이상 골라야 요리를 할 수 있답니다.</p>
         <button class="btn btn-primary" data-nav="fridge">식재료 고르러 가기 🧺</button>
@@ -462,6 +476,9 @@ function renderDetail(id) {
 
   if (!recipe) return `<p style="text-align:center; padding: 40px;">레시피 정보가 올바르지 않아요.</p>`;
 
+  // Dynamic back button text based on tracking state
+  const backLabel = state.detailBackRoute === 'mypage' ? '◀ 마이페이지' : '◀ 추천 목록';
+
   // Draw Grocery Receipt for convenience store combo
   if (isAlt) {
     const formattedDate = new Date().toLocaleString('ko-KR', { hour12: false });
@@ -476,14 +493,17 @@ function renderDetail(id) {
     return `
       <div class="detail-container">
         <div class="btn-back-wrap">
-          <button class="btn btn-outline btn-sm" id="btn-detail-back">◀ 추천 목록</button>
+          <button class="btn btn-outline btn-sm" id="btn-detail-back">${backLabel}</button>
         </div>
         
         <!-- Convenience Store Receipt Card layout -->
         <div class="receipt-paper">
           <div class="receipt-header">
             <div class="receipt-store-logo">🏪 자취왕의 편의점 조합</div>
-            <div class="receipt-title">🧾 장바구니 영수증</div>
+            <div class="receipt-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>🧾 장바구니 영수증</span>
+              <button class="btn btn-secondary btn-sm" id="btn-view-shopping" style="padding: 4px 10px !important; font-size:11px !important;">장보기 🛒</button>
+            </div>
             <div class="receipt-date">ISSUED: ${formattedDate}</div>
             <div class="receipt-divider">================================</div>
           </div>
@@ -516,7 +536,7 @@ function renderDetail(id) {
           </div>
         </div>
         
-        <div class="detail-actions-tray" style="margin-top:20px; justify-content:center;">
+        <div class="detail-actions-tray" style="margin-top:20px; display:flex; justify-content:center;">
           <button class="btn btn-primary" id="btn-start-cooking" data-recipe-id="${recipe.id}" style="flex: none; max-width: 280px; width: 100%;">
             이 조합 조리 시작! 🍳
           </button>
@@ -524,9 +544,6 @@ function renderDetail(id) {
       </div>
     `;
   }
-
-  // Normal recipe (continue with original code)
-  // Calculate matching stats
 
   // Calculate matching stats
   const total = recipe.need.length;
@@ -543,7 +560,7 @@ function renderDetail(id) {
   return `
     <div class="detail-container">
       <div class="btn-back-wrap">
-        <button class="btn btn-outline btn-sm" id="btn-detail-back">◀ 추천 목록</button>
+        <button class="btn btn-outline btn-sm" id="btn-detail-back">${backLabel}</button>
       </div>
       
       <!-- Open Notebook Container -->
@@ -573,8 +590,9 @@ function renderDetail(id) {
             <ul class="notepad-list">
               ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
             </ul>
-             <div style="font-family: var(--font-hand); font-size:15px; color: var(--color-orange-deep); margin-top: 10px; border-top:1px dashed var(--color-cream-dark); padding-top:6px;">
-               🚨 <b>냉장고에 없는 재료:</b> ${missingLabel}
+             <div style="font-family: var(--font-hand); font-size:15px; color: var(--color-orange-deep); margin-top: 10px; border-top:1px dashed var(--color-cream-dark); padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
+               <span>🚨 <b>냉장고에 없는 재료:</b> ${missingLabel}</span>
+               <button class="btn btn-secondary btn-sm" id="btn-view-shopping" style="padding: 4px 10px !important; font-size:12px !important; margin-left:10px;">장보기 🛒</button>
              </div>
           </div>
           
@@ -633,7 +651,7 @@ function renderCooking(id) {
 }
 
 // Timer management to fill progress bar and auto navigate
-function startCookingFlow(recipeId) {
+export function startCookingFlow(recipeId) {
   let progress = 0;
   const fillElement = document.querySelector('.cooking-progress-fill');
 
@@ -701,7 +719,7 @@ function renderCompleted(id) {
 }
 
 // Spawns confetti divs programmatically
-function spawnConfetti() {
+export function spawnConfetti() {
   const container = document.querySelector('.completed-container');
   if (!container) return;
 
@@ -721,15 +739,14 @@ function spawnConfetti() {
   }
 }
 
-
-/* ==================== 8. COOK BOOK (YORI DOGAM) VIEW RENDER ==================== */
-function renderBook() {
+/* ==================== 8. 통합 마이페이지 (MY PAGE) VIEW RENDER ==================== */
+function renderMyPage() {
   const all = [...RECIPES, ...ALTERNATIVE_RECIPES];
   const cookedCount = all.filter(r => (state.cookedCounts[r.id] || 0) > 0).length;
   const totalRecipes = all.length;
   const percent = Math.round((cookedCount / totalRecipes) * 100);
 
-  // Favorites
+  // Favorites (찜한 레시피)
   const favRecipes = all.filter(r => state.favorites.has(r.id));
   const favsHtml = favRecipes.length > 0
     ? favRecipes.map(r => {
@@ -741,10 +758,17 @@ function renderBook() {
           </div>
         `;
     }).join('')
-    : `<div class="book-empty-text">보관된 하트 요리가 없어요. 레시피 카드에서 ❤️를 눌러서 찜해보세요!</div>`;
+    : `<div class="book-empty-text" style="grid-column: 1/-1; text-align:center; padding: 20px; font-family: var(--font-hand); color: var(--color-gray);">아직 찜한 요리가 없어요. 레시피 상세 카드에서 하트(🤍)를 눌러 찜해보세요!</div>`;
 
-  // Collection
-  const collectionHtml = all.map(r => {
+  // Collection 필터링 처리 (전체 / 쉬움 / 보통 / 어려움)
+  const filterVal = state.mypageDifficultyFilter;
+  let filteredAll = all;
+  if (filterVal !== 'all') {
+    filteredAll = all.filter(r => r.difficulty === filterVal);
+  }
+
+  // Collection (도감 리스트 렌더링)
+  const collectionHtml = filteredAll.map(r => {
     const count = state.cookedCounts[r.id] || 0;
     const isCooked = count > 0;
 
@@ -777,41 +801,58 @@ function renderBook() {
     }
   }).join('');
 
+  // 필터링 결과가 비어있을 때 안내 문구
+  const finalCollectionHtml = collectionHtml || `<div class="book-empty-text" style="grid-column: 1/-1; text-align:center; padding: 30px 20px; font-family: var(--font-hand); color: var(--color-gray);">해당 난이도("${filterVal}") 조건의 요리 카드가 존재하지 않습니다.</div>`;
+
   return `
-    <div class="book-container">
-      <div class="fridge-header">
-        <h2 class="fridge-title">📖 자취생 요리 도감</h2>
-        <p class="fridge-subtitle">완성한 요리는 도감에 실물로 수집됩니다! (도감을 채워보세요!)</p>
+    <div class="mypage-container" style="display: flex; flex-direction: column; gap: 35px; width: 100%;">
+      <div class="fridge-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 15px;">
+        <div>
+          <h2 class="fridge-title">👤 마이페이지</h2>
+          <p class="fridge-subtitle">내 찜 레시피와 요리 도감을 관리해요!</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-open-shopping" style="padding: 8px 16px !important; font-size: 14px !important; display: flex; align-items: center; gap: 6px;">
+          🛒 장바구니 리스트
+        </button>
       </div>
 
-      <!-- Progress bar -->
-      <div class="book-progress-wrapper">
-        <div class="book-progress-text">
-          <span>도감 완성률:</span>
-          <strong>${cookedCount} / ${totalRecipes} (${percent}%)</strong>
-        </div>
-        <div class="book-progress-bar-bg">
-          <div class="book-progress-bar-fill" style="width: ${percent}%;"></div>
-        </div>
-      </div>
-
-      <!-- Favorites Section -->
-      <div class="book-favorites-section">
-        <h3 class="book-section-title">❤️ 즐겨찾기 레시피</h3>
-        <div class="book-favorites-grid">
+      <!-- 1. 찜한 레시피 섹션 -->
+      <div class="mypage-section" style="background-color: var(--color-white); border: var(--border-thick); border-radius: var(--br-lg); padding: 25px 20px; box-shadow: 0 6px 0 var(--color-shadow);">
+        <h3 class="book-section-title" style="margin-top:0; border-bottom: 2px dashed var(--color-cream-dark); padding-bottom: 8px;">❤️ 내가 찜한 요리</h3>
+        <div class="book-favorites-grid" style="margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
           ${favsHtml}
         </div>
       </div>
 
-      <!-- Main Collection -->
-      <h3 class="book-section-title">🍳 도감 리스트</h3>
-      <div class="book-grid">
-        ${collectionHtml}
+      <!-- 2. 요리 도감 섹션 -->
+      <div class="mypage-section" style="background-color: var(--color-white); border: var(--border-thick); border-radius: var(--br-lg); padding: 25px 20px; box-shadow: 0 6px 0 var(--color-shadow);">
+        <h3 class="book-section-title" style="margin-top:0; border-bottom: 2px dashed var(--color-cream-dark); padding-bottom: 8px;">📖 자취생 요리 도감</h3>
+        
+        <div class="book-progress-wrapper" style="margin: 15px 0 20px 0; background: var(--color-cream-light); border: var(--border-thin); border-radius: var(--br-sm); padding: 15px;">
+          <div class="book-progress-text" style="display:flex; justify-content:space-between; font-weight:800; font-size:14px; margin-bottom:8px;">
+            <span>전체 도감 완성률</span>
+            <strong>${cookedCount} / ${totalRecipes} (${percent}%)</strong>
+          </div>
+          <div class="book-progress-bar-bg" style="background-color: var(--color-white); border: var(--border-thin); border-radius: 99px; height: 16px; overflow: hidden; position: relative;">
+            <div class="book-progress-bar-fill" style="width: ${percent}%; background-color: var(--color-mint); height: 100%; transition: width 0.4s ease;"></div>
+          </div>
+        </div>
+
+        <!-- 난이도 필터 메뉴 칩 버튼 그룹 -->
+        <div class="difficulty-filter-container" style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; font-family: var(--font-main);">
+          <button class="chip-btn ${state.mypageDifficultyFilter === 'all' ? 'active' : ''}" data-diff="all" style="font-size:12px; padding: 5px 14px;">전체</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === '쉬움' ? 'active' : ''}" data-diff="쉬움" style="font-size:12px; padding: 5px 14px;">🟢 쉬움</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === '보통' ? 'active' : ''}" data-diff="보통" style="font-size:12px; padding: 5px 14px;">🟡 보통</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === '어려움' ? 'active' : ''}" data-diff="어려움" style="font-size:12px; padding: 5px 14px;">🔴 어려움</button>
+        </div>
+
+        <div class="book-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
+          ${finalCollectionHtml}
+        </div>
       </div>
     </div>
   `;
 }
-
 
 /* ==================== 7. RATING SCREEN RENDER ==================== */
 function renderRating(id) {
@@ -860,249 +901,11 @@ function renderRating(id) {
       ${feedbackHtml}
       
       <div class="rating-action-shelf">
-        <button class="btn btn-outline" id="btn-rate-book" data-nav="book">📖 요리 도감</button>
+        <button class="btn btn-outline" id="btn-rate-book" data-nav="mypage">📖 요리 도감</button>
         <button class="btn btn-primary" id="btn-rate-home" data-nav="home">🏠 홈으로</button>
       </div>
     </div>
   `;
-}
-
-/* ==================== LISTENERS & ACTIONS ATTACHMENT ==================== */
-function attachListeners() {
-
-  // Home View Actions
-  const btnStartFridge = document.getElementById('btn-start-fridge');
-  if (btnStartFridge) {
-    btnStartFridge.addEventListener('click', () => {
-      navigate('fridge');
-    });
-  }
-
-  // Helper to sync count and button states in DOM without page refreshes
-  function updateFridgeFooterDOM() {
-    const countNum = document.querySelector('.selected-status span');
-    if (countNum) {
-      countNum.textContent = state.selected.size;
-    }
-    const clearBtn = document.getElementById('btn-fridge-clear');
-    if (clearBtn) {
-      clearBtn.disabled = (state.selected.size === 0);
-    }
-    const suggestBtn = document.getElementById('btn-suggest-recipes');
-    if (suggestBtn) {
-      suggestBtn.disabled = (state.selected.size === 0);
-    }
-  }
-
-  // Fridge View Actions - Search filter input inline
-  const searchInput = document.getElementById('fridge-search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase().trim();
-      state.search = query;
-
-      // Inline hide/show stickers matching query
-      document.querySelectorAll('.ingredient-sticker').forEach(sticker => {
-        const name = sticker.querySelector('.sticker-name').textContent.toLowerCase();
-        const matches = name.includes(query);
-        sticker.style.display = matches ? 'inline-flex' : 'none';
-      });
-    });
-  }
-
-  // Door front click to swing open fridge
-  const doorFront = document.querySelector('.door-front');
-  if (doorFront) {
-    doorFront.addEventListener('click', () => {
-      state.isFridgeOpen = true;
-      const fridgeElement = document.querySelector('.interactive-fridge');
-      if (fridgeElement) {
-        fridgeElement.classList.add('fridge-open');
-      }
-      showToast('냉장고 문을 열었어요! 🥛✨');
-    });
-  }
-
-  // Door back click to swing close fridge
-  const doorBack = document.querySelector('.door-back');
-  if (doorBack) {
-    doorBack.addEventListener('click', (e) => {
-      // If clicking category door pockets, let filter execute, don't close.
-      if (e.target.closest('.door-pocket')) return;
-
-      state.isFridgeOpen = false;
-      const fridgeElement = document.querySelector('.interactive-fridge');
-      if (fridgeElement) {
-        fridgeElement.classList.remove('fridge-open');
-      }
-      showToast('냉장고 문을 닫았어요.');
-    });
-  }
-
-  // Category door pockets click
-  document.querySelectorAll('.door-pocket').forEach(pocket => {
-    pocket.addEventListener('click', () => {
-      state.activeCategory = pocket.dataset.cat;
-      render();
-    });
-  });
-
-  // Ingredient Selection toggles - completely in-DOM for smooth animations
-  document.querySelectorAll('.ingredient-sticker').forEach(sticker => {
-    sticker.addEventListener('click', () => {
-      const ingId = sticker.dataset.ing;
-
-      if (state.selected.has(ingId)) {
-        state.selected.delete(ingId);
-        sticker.classList.remove('selected');
-      } else {
-        state.selected.add(ingId);
-        sticker.classList.add('selected');
-        // Pop animation trigger
-        sticker.classList.add('pop-bounce');
-        setTimeout(() => {
-          sticker.classList.remove('pop-bounce');
-        }, 350);
-      }
-
-      updateCarouselRecipes();
-      updateFridgeFooterDOM();
-    });
-  });
-
-  // Clear button (resets all active selections in DOM)
-  const clearBtn = document.getElementById('btn-fridge-clear');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      state.selected.clear();
-      document.querySelectorAll('.ingredient-sticker').forEach(st => st.classList.remove('selected'));
-      updateCarouselRecipes();
-      updateFridgeFooterDOM();
-      showToast('선택한 재료를 모두 초기화했어요.');
-    });
-  }
-
-  // Recommend action button
-  const suggestBtn = document.getElementById('btn-suggest-recipes');
-  if (suggestBtn) {
-    suggestBtn.addEventListener('click', () => {
-      navigate('recipes');
-    });
-  }
-
-  // Dislike button action to load alternative 6 recipes
-  const dislikeBtn = document.getElementById('btn-dislike-recipe');
-  if (dislikeBtn) {
-    dislikeBtn.addEventListener('click', () => {
-      state.showingAlternatives = !state.showingAlternatives;
-      updateCarouselRecipes();
-      state.currentCarouselIndex = 0;
-      render();
-      if (state.showingAlternatives) {
-        showToast('자취생 비책! 편의점 꿀조합 레시피 6개를 불러왔어요! ✨');
-      } else {
-        showToast('일반 매칭 추천 레시피로 돌아왔어요! 🍳');
-      }
-    });
-  }
-
-  // Cookbook discovered recipe clicks to view details
-  document.querySelectorAll('.book-recipe-card.discovered').forEach(card => {
-    card.addEventListener('click', () => {
-      const rid = card.dataset.rid;
-      if (rid) {
-        navigate('detail', rid);
-      }
-    });
-  });
-
-  // Recipes carousel slide navigation controls
-  const prevBtn = document.getElementById('btn-carousel-prev');
-  if (prevBtn) {
-    prevBtn.addEventListener('click', () => {
-      const len = state.carouselRecipes.length;
-      state.currentCarouselIndex = (state.currentCarouselIndex - 1 + len) % len;
-      render();
-    });
-  }
-
-  const nextBtn = document.getElementById('btn-carousel-next');
-  if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      const len = state.carouselRecipes.length;
-      state.currentCarouselIndex = (state.currentCarouselIndex + 1) % len;
-      render();
-    });
-  }
-
-  // dots pagination clicks
-  document.querySelectorAll('.carousel-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      state.currentCarouselIndex = parseInt(dot.dataset.index);
-      render();
-    });
-  });
-
-  // Recipe card View Detail button
-  const viewStepsBtn = document.getElementById('btn-view-steps');
-  if (viewStepsBtn) {
-    viewStepsBtn.addEventListener('click', () => {
-      navigate('detail', viewStepsBtn.dataset.rid);
-    });
-  }
-
-  // Fav button toggle inside carousel or detail page
-  const favToggles = document.querySelectorAll('[data-recipe-id]');
-  favToggles.forEach(toggle => {
-    // Ensure we don't bind to standard actions
-    if (toggle.id === 'btn-start-cooking' || toggle.id === 'btn-go-rating') return;
-
-    toggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const rid = toggle.dataset.recipeId;
-      if (state.favorites.has(rid)) {
-        state.favorites.delete(rid);
-        showToast('즐겨찾기 목록에서 뺐어요.');
-      } else {
-        state.favorites.add(rid);
-        showToast('내 즐겨찾기 레시피에 저장 완료! ❤️');
-      }
-      render();
-    });
-  });
-
-  // Detail Page back action
-  const detailBackBtn = document.getElementById('btn-detail-back');
-  if (detailBackBtn) {
-    detailBackBtn.addEventListener('click', () => {
-      navigate('recipes');
-    });
-  }
-
-  // Start Cooking action trigger
-  const startCookingBtn = document.getElementById('btn-start-cooking');
-  if (startCookingBtn) {
-    startCookingBtn.addEventListener('click', () => {
-      navigate('cooking', startCookingBtn.dataset.recipeId);
-    });
-  }
-
-  // Completed Go Rating action
-  const goRatingBtn = document.getElementById('btn-go-rating');
-  if (goRatingBtn) {
-    goRatingBtn.addEventListener('click', () => {
-      navigate('rating', goRatingBtn.dataset.recipeId);
-    });
-  }
-
-  // Rating Choices click handling
-  document.querySelectorAll('.rating-options button').forEach(choiceBtn => {
-    choiceBtn.addEventListener('click', () => {
-      state.ratingFeedback = choiceBtn.dataset.choice;
-      render();
-      showToast('💌 평가를 반영했어요. 감사합니다!');
-    });
-  });
 }
 
 // Bootstrapping the page loader
@@ -1116,7 +919,7 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 }
 
 /* ==================== ALTERNATIVE RECIPE SUGGESTION MODAL ==================== */
-function showDislikeModal() {
+export function showDislikeModal() {
   let modal = document.getElementById('dislike-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -1159,3 +962,24 @@ function showDislikeModal() {
   modal.offsetHeight;
   modal.classList.add('show');
 }
+
+// 기능별 모듈 초기화 실행 (순환 참조 방지를 위해 비동기 동적 임포트 사용)
+Promise.all([
+  import('./ingredient.js'),
+  import('./recommend.js'),
+  import('./recipe.js'),
+  import('./favorite.js'),
+  import('./shopping.js')
+]).then(([
+  ingredientMod,
+  recommendMod,
+  recipeMod,
+  favoriteMod,
+  shoppingMod
+]) => {
+  ingredientMod.initIngredient();
+  recommendMod.initRecommend();
+  recipeMod.initRecipe();
+  favoriteMod.initFavorite();
+  shoppingMod.initShopping();
+});

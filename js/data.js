@@ -1,4 +1,10 @@
-const INGREDIENTS = [
+//------------------------------------
+// 담당 : 채린
+// 수정 가능
+//------------------------------------
+/* 데이터 조회 모듈 */
+
+export const INGREDIENTS = [
   {id:'egg', name:'계란', emoji:'🥚', category:'dairy'},
   {id:'milk', name:'우유', emoji:'🥛', category:'dairy'},
   {id:'cheese', name:'치즈', emoji:'🧀', category:'dairy'},
@@ -20,7 +26,7 @@ const INGREDIENTS = [
   {id:'bread', name:'빵', emoji:'🍞', category:'grain'},
 ];
 
-const CATEGORIES = {
+export const CATEGORIES = {
   all: { name: '전체', emoji: '✨' },
   dairy: { name: '유제품·달걀', emoji: '🥚' },
   vegetable: { name: '채소·과일', emoji: '🥦' },
@@ -28,7 +34,7 @@ const CATEGORIES = {
   grain: { name: '곡류·식사', emoji: '🍞' }
 };
 
-const RECIPES = [
+export const RECIPES = [
   {
     id:'r1', name:'감자전', emoji:'🥞', difficulty:'쉬움', time:'20분',
     need:['potato','onion','egg'], missing:['부침가루','식용유'],
@@ -42,7 +48,7 @@ const RECIPES = [
     need:['potato','onion','carrot'], missing:['식용유'],
     aiReason:'포실포실한 감자와 아삭한 당근, 양파의 조화가 훌륭해요.',
     ingredients:['감자 2개','당근 1/2개','양파 1/2개','식용유','소금','후추'],
-    steps:['감자, 양파, 당근을 얇게 채썰어 준비합니다. 채썬 감자는 물에 헹구어 전분기를 빼면 더 달라붙지 않아요.','달군 팬에 기름을 넉넉히 두르고 단단한 감자를 먼저 볶아줍니다.','감자가 투명해지기 시작하면 당근과 양파를 넣고 중불에서 함께 볶볶!','소금과 후추로 간을 맞추고 통깨를 솔솔 뿌려서 완성합니다.'],
+    steps:['감자, 양파, 당근을 얇게 채썰어 준비합니다. 채썬 감자는 물에 헹구어 전분기를 빼면 더 달라붙지 않아요.','달군 팬에 기름을 넉넉히 두르고 단단한 감자를 먼저 볶아줍니다.','감자가 투명해지기 시작하면 당근과 양파를 넣고 중불에서 함께 볶볶!','소금와 후추로 간을 맞추고 통깨를 솔솔 뿌려서 완성합니다.'],
     cookingSequence: ['🥔', '🔪', '🍳', '🥗']
   },
   {
@@ -79,8 +85,7 @@ const RECIPES = [
   }
 ];
 
-
-const ALTERNATIVE_RECIPES = [
+export const ALTERNATIVE_RECIPES = [
   {
     id: 'alt1',
     name: '마크정식',
@@ -166,7 +171,7 @@ const ALTERNATIVE_RECIPES = [
     steps: [
       '냄비에 물을 끓이고 짜파게티 면과 신라면 면, 후레이크를 모두 넣어 익힙니다.',
       '면이 적당히 익으면 종이컵 1/2컵 분량의 물만 남기고 따라 냅니다.',
-      '짜장 스프 1팩과 신라면 스프 1/2팩을 넣고 약불에서 소스가 고루 배도록 볶습니다.',
+      '짜장 스프 1팩 and 신라면 스프 1/2팩을 넣고 약불에서 소스가 고루 배도록 볶습니다.',
       '완성된 짜구리 위에 치즈 2장을 올린 뒤 남은 열기로 촉촉히 녹여 비벼 먹습니다.'
     ],
     cookingSequence: ['🍲', '🧀', '🍳', '👌'],
@@ -226,3 +231,29 @@ const ALTERNATIVE_RECIPES = [
     totalPrice: 1400
   }
 ];
+
+/** 기본 재료 데이터를 반환합니다. */
+export function getIngredients() {
+  return INGREDIENTS;
+}
+
+/** 기본 레시피 데이터를 반환합니다. */
+export function getRecipes() {
+  return RECIPES;
+}
+
+/** 대체 레시피 데이터를 반환합니다. */
+export function getAlternativeRecipes() {
+  return ALTERNATIVE_RECIPES;
+}
+
+/** 재료 ID로 재료를 조회합니다. */
+export function findIngredient(ingredientId) {
+  return getIngredients().find((ingredient) => ingredient.id === ingredientId);
+}
+
+/** 레시피 ID로 레시피를 조회합니다. */
+export function findRecipe(recipeId) {
+  return [...getRecipes(), ...getAlternativeRecipes()]
+    .find((recipe) => recipe.id === recipeId);
+}
