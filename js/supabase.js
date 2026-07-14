@@ -3,11 +3,11 @@
 // 설명 : Supabase 세팅 완료 시 주석을 해제하고 URL/Key를 입력하여 활성화하세요.
 //------------------------------------
 
-import { createClient } from 'https://trxvoqxuyyjyfmvpdkxx.supabase.co';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // 1. Supabase 접속 설정 (세팅 완료 시 여기에 입력)
-const SUPABASE_URL = 'https://trxvoqxuyyjyfmvpdxkx.supabase.co/rest/v1/recipes'; // 예: 'https://your-project.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_CsMIpkJEDF3VKvKs4mfVIw_6OudaQvS'; // 예: 'your-anon-key'
+const SUPABASE_URL = 'https://trxvoqxuyyjyfmvpdxkx.supabase.co'; // 예: 'https://your-project.supabase.co'; // 예: 'https://your-project.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_CsMIpkJEDF3VKvKs4mfVIw_6OudaQvS'; // 예: 'your-anon-key'; // 예: 'your-anon-key'
 
 export const supabase = (SUPABASE_URL && SUPABASE_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_KEY) 
