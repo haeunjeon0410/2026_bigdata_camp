@@ -2806,32 +2806,18 @@ h4 {
 
 /* 촥 넘겨지는 손맛 캐러셀 & 책 펼침 입체 애니메이션 추가 */
 
-/* 1. 우측에서 좌측으로 샥 밀려오며 안착 (Next 클릭 시) */
-.recipe-card-box.slide-in-right {
-  animation: slideInRight 0.38s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-}
-@keyframes slideInRight {
-  0% {
-    transform: translateX(35px) rotate(2.5deg) scale(0.96);
-    opacity: 0.1;
-  }
-  100% {
-    transform: translateX(0) rotate(0deg) scale(1);
-    opacity: 1;
-  }
-}
-
-/* 2. 좌측에서 우측으로 샥 밀려오며 안착 (Prev 클릭 시) */
+/* 1 & 2. 잔잔하고 부드러운 실크 페이드 (Soft Silk Fade) */
+.recipe-card-box.slide-in-right,
 .recipe-card-box.slide-in-left {
-  animation: slideInLeft 0.38s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: softSilkFade 0.32s ease-out forwards;
 }
-@keyframes slideInLeft {
+@keyframes softSilkFade {
   0% {
-    transform: translateX(-35px) rotate(-2.5deg) scale(0.96);
-    opacity: 0.1;
+    transform: scale(0.99);
+    opacity: 0.3;
   }
   100% {
-    transform: translateX(0) rotate(0deg) scale(1);
+    transform: scale(1);
     opacity: 1;
   }
 }
