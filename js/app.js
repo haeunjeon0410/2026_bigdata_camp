@@ -907,7 +907,7 @@ function renderMyPage() {
         </div>
 
         <!-- 난이도 필터 메뉴 칩 버튼 그룹 -->
-        <div class="difficulty-filter-container" style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; font-family: var(--font-main);">
+        <div class="difficulty-filter-container" style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:20px; flex-wrap:wrap; font-family: var(--font-main);">
           <button class="chip-btn ${state.mypageDifficultyFilter === "all" ? "active" : ""}" data-diff="all" style="font-size:12px; padding: 5px 14px;">전체</button>
           <button class="chip-btn ${state.mypageDifficultyFilter === "쉬움" ? "active" : ""}" data-diff="쉬움" style="font-size:12px; padding: 5px 14px;">🟢 쉬움</button>
           <button class="chip-btn ${state.mypageDifficultyFilter === "보통" ? "active" : ""}" data-diff="보통" style="font-size:12px; padding: 5px 14px;">🟡 보통</button>
