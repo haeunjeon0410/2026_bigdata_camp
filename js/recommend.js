@@ -197,7 +197,7 @@ function isFilterPreference(label) {
   return Boolean(getPreferenceRule(label));
 }
 
-function applyRecipeFilters() {
+export function applyRecipeFilters() {
   if (!Array.isArray(state.carouselRecipes)) return;
 
   const recipes = state.carouselRecipes.map((recipe) => {
@@ -276,7 +276,7 @@ function rememberTasteChoices() {
   });
 }
 
-function decorateRecipeCard() {
+export function decorateRecipeCard() {
   if (state.route !== 'recipes' || state.recipeViewMode !== 'menu') return;
   const recipesContainer = document.querySelector('.recipes-container');
   if (recipesContainer && !recipesContainer.querySelector('[data-recipe-toolbar]')) {
@@ -467,15 +467,8 @@ export function initRecommend() {
   addCuisineChoices();
 
   document.addEventListener('click', (event) => {
-    queueMicrotask(syncRenderedView);
-    const recipeNavigation = event.target.closest('[data-nav="recipes"]');
-    if (recipeNavigation) {
-      if (state.recipeViewMode === 'menu') {
-        applyRecipeFilters();
-        decorateRecipeCard();
-      }
-    }
-
+    // 💥 중복/비동기 버그를 일으키던 queueMicrotask(syncRenderedView)와 data-nav="recipes" 수동 렌더 트리거 소거
+    
     // 이스터에그: 토끼 요리사 클릭 시 음식 폭죽 팡 터짐!
     const bunny = event.target.closest('.home-hero-img');
     if (bunny) {
@@ -507,7 +500,6 @@ export function initRecommend() {
         // navigate()가 기본 추천 목록을 다시 계산하므로 취향/부족 재료를 재적용합니다.
         applyRecipeFilters();
         render();
-        decorateRecipeCard();
       }
       return;
     }
@@ -559,7 +551,7 @@ export function initRecommend() {
     if (pageButton) {
       const pageCount = Math.max(1, Math.ceil(state.carouselRecipes.length / 10));
       recipePage = Math.max(1, Math.min(pageCount, recipePage + (pageButton.dataset.recipePage === 'next' ? 1 : -1)));
-      decorateRecipeCard();
+      render(); // 동기적으로 render 호출하면 app.js의 render 내에서 자동으로 그리드가 다시 그려짐!
       return;
     }
 
@@ -583,26 +575,7 @@ export function initRecommend() {
       return;
     }
 
-    const previous = event.target.closest('#btn-carousel-prev');
-    const next = event.target.closest('#btn-carousel-next');
-    if (previous || next) {
-      const length = state.carouselRecipes.length;
-      if (!length) return;
-      const offset = previous ? -1 : 1;
-      state.currentCarouselIndex =
-        (state.currentCarouselIndex + offset + length) % length;
-      render();
-      decorateRecipeCard();
-      return;
-    }
-
-    const dot = event.target.closest('.carousel-dot');
-    if (dot) {
-      state.currentCarouselIndex = parseInt(dot.dataset.index, 10);
-      render();
-      decorateRecipeCard();
-    }
-
+    // 💥 app.js와 100% 중복되던 캐러셀 슬라이더(prev, next, dot) 핸들러 제거
   });
 
   document.addEventListener('input', (event) => {

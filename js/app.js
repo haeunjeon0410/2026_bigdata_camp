@@ -1,4 +1,5 @@
 import { INGREDIENTS, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { applyRecipeFilters, decorateRecipeCard } from './recommend.js';
 
 // Initial State Management
 export const state = {
@@ -236,6 +237,12 @@ export function render() {
   window.__routingActive = false; // 플래그 초기화
 
   app.innerHTML = `<div class="page ${isRouteChanged ? 'route-change-active' : ''}">${html}</div>`;
+
+  // 💥 전체 메뉴 격자판('menu') 모드 복귀 시 동기적 리렌더링 강제 동기화 수행!
+  if (state.route === 'recipes' && state.recipeViewMode === 'menu') {
+    applyRecipeFilters();
+    decorateRecipeCard();
+  }
 }
 
 /* ==================== 1. HOME SCREEN RENDER ==================== */
