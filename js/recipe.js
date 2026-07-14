@@ -8,54 +8,6 @@ import { state, showToast, render, navigate } from './app.js';
 import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
 import { addShoppingItems } from './shopping.js';
 
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-export function normalizeSubstituteTips(recipe) {
-  if (!recipe || !Array.isArray(recipe.substituteTips)) return [];
-
-  return recipe.substituteTips.map((tip) => {
-    if (!tip || typeof tip !== 'object') return null;
-
-    const original = String(tip.original || '').trim();
-    const alternatives = (Array.isArray(tip.alternatives)
-      ? tip.alternatives
-      : [tip.alternatives])
-      .filter((alternative) => alternative != null)
-      .map((alternative) => String(alternative).trim())
-      .filter(Boolean);
-    const note = String(tip.note || '').trim();
-
-    if (!original || alternatives.length === 0) return null;
-    return { original, alternatives, note };
-  }).filter(Boolean);
-}
-
-export function renderSubstituteTips(recipe) {
-  const tips = normalizeSubstituteTips(recipe);
-  if (tips.length === 0) return '';
-
-  return `
-    <div class="receipt-tips substitute-tips">
-      <h4 class="tips-title">💡 대체 재료 팁</h4>
-      <ul class="tips-list">
-        ${tips.map((tip) => `
-          <li>
-            <strong>${escapeHtml(tip.original)}</strong> 대신 ${tip.alternatives.map(escapeHtml).join(', ')}
-            ${tip.note ? `<span>${escapeHtml(tip.note)}</span>` : ''}
-          </li>
-        `).join('')}
-      </ul>
-    </div>
-  `;
-}
-
 function getIngredientKeys(value) {
   if (value == null) return [];
 
@@ -199,13 +151,6 @@ export function initRecipe() {
           : [];
       const selectedKeys = new Set(selectedValues.flatMap(getIngredientKeys));
       const missingIngredients = recipe ? getMissingIngredients(recipe, selectedKeys) : [];
-
-      console.log('[shopping debug]', {
-        recipeNeed: recipe?.need,
-        selected: selectedValues,
-        selectedKeys: [...selectedKeys],
-        missingIngredients
-      });
 
       if (missingIngredients.length === 0) {
         showToast('부족한 재료가 없습니다!');
