@@ -17,6 +17,7 @@ export const state = {
   // Recipe Carousel State
   carouselRecipes: [],
   currentCarouselIndex: 0,
+  carouselDirection: null, // 'left' or 'right' or null
 
   // Detail page param
   currentDetail: null,
@@ -145,6 +146,23 @@ document.addEventListener('click', (e) => {
   // 홈 화면 타이틀 뱃지 클릭 시 파이브가이즈 크레딧 팝업 활성화 이스터에그!
   if (e.target.closest('#btn-home-badge')) {
     showCreditsModal();
+  }
+
+  // ◀, ▶ 버튼 및 페이지네이션 도트 클릭 시 넘김 방향 감지하여 캐시 기록
+  const prevBtn = e.target.closest('#btn-carousel-prev');
+  const nextBtn = e.target.closest('#btn-carousel-next');
+  const dotBtn = e.target.closest('.carousel-dot');
+
+  if (prevBtn) {
+    state.carouselDirection = 'left';
+  } else if (nextBtn) {
+    state.carouselDirection = 'right';
+  } else if (dotBtn) {
+    const targetIdx = parseInt(dotBtn.dataset.index, 10);
+    state.carouselDirection = targetIdx > state.currentCarouselIndex ? 'right' : 'left';
+  } else {
+    // 일반 라우팅이나 다른 클릭 시에는 초기화
+    state.carouselDirection = null;
   }
 });
 
@@ -456,7 +474,7 @@ function renderRecipes() {
         <button class="carousel-btn carousel-btn-prev" id="btn-carousel-prev" aria-label="이전 레시피">◀</button>
         
         <div class="carousel-track">
-          <div class="recipe-card-box">
+          <div class="recipe-card-box ${state.carouselDirection ? 'slide-in-' + state.carouselDirection : ''}">
             <div class="recipe-card-header">
               ${currentRecipe.emoji}
               <button class="recipe-fav-toggle ${isFav ? 'active' : ''}" data-recipe-id="${currentRecipe.id}" aria-label="즐겨찾기">
