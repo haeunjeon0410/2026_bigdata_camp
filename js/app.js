@@ -813,6 +813,19 @@ function renderMyPage() {
 
   // Favorites (찜한 레시피)
   const favRecipes = all.filter(r => state.favorites.has(r.id));
+
+  // localStorage의 최근 찜한 시간(favoriteAddedAt) 기준으로 내림차순 정렬 연동
+  try {
+    const addedAtMap = JSON.parse(localStorage.getItem('favoriteAddedAt') || '{}');
+    favRecipes.sort((a, b) => {
+      const timeA = addedAtMap[a.id] ? new Date(addedAtMap[a.id]).getTime() : 0;
+      const timeB = addedAtMap[b.id] ? new Date(addedAtMap[b.id]).getTime() : 0;
+      return timeB - timeA; // 최신 찜한 시간이 더 큰 타임스탬프를 가짐 -> 내림차순 정렬
+    });
+  } catch (e) {
+    console.warn("localStorage 'favoriteAddedAt' 파싱 에러 발생:", e);
+  }
+
   const favsHtml = favRecipes.length > 0
     ? favRecipes.map(r => {
       const isCooked = (state.cookedCounts[r.id] || 0) > 0;
@@ -825,10 +838,13 @@ function renderMyPage() {
     }).join('')
     : `<div class="book-empty-text" style="grid-column: 1/-1; text-align:center; padding: 20px; font-family: var(--font-hand); color: var(--color-gray);">아직 찜한 요리가 없어요. 레시피 상세 카드에서 하트를 눌러 찜해보세요!</div>`;
 
-  // Collection 필터링 처리 (전체 / 쉬움 / 보통 / 어려움)
+  // Collection 필터링 처리 (전체 / 쉬움 / 보통 / 어려움 / 편의점)
   const filterVal = state.mypageDifficultyFilter;
   let filteredAll = all;
-  if (filterVal !== 'all') {
+  if (filterVal === '편의점') {
+    // ID가 alt로 시작하는 편의점 꿀조합만 필터링
+    filteredAll = all.filter(r => r.id.startsWith('alt'));
+  } else if (filterVal !== 'all') {
     filteredAll = all.filter(r => r.difficulty === filterVal);
   }
 
@@ -904,11 +920,12 @@ function renderMyPage() {
         </div>
 
         <!-- 난이도 필터 메뉴 칩 버튼 그룹 -->
-        <div class="difficulty-filter-container" style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; font-family: var(--font-main);">
+        <div class="difficulty-filter-container" style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:20px; flex-wrap:wrap; font-family: var(--font-main);">
           <button class="chip-btn ${state.mypageDifficultyFilter === "all" ? "active" : ""}" data-diff="all" style="font-size:12px; padding: 5px 14px;">전체</button>
           <button class="chip-btn ${state.mypageDifficultyFilter === "쉬움" ? "active" : ""}" data-diff="쉬움" style="font-size:12px; padding: 5px 14px;">🟢 쉬움</button>
           <button class="chip-btn ${state.mypageDifficultyFilter === "보통" ? "active" : ""}" data-diff="보통" style="font-size:12px; padding: 5px 14px;">🟡 보통</button>
           <button class="chip-btn ${state.mypageDifficultyFilter === "어려움" ? "active" : ""}" data-diff="어려움" style="font-size:12px; padding: 5px 14px;">🔴 어려움</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === "편의점" ? "active" : ""}" data-diff="편의점" style="font-size:12px; padding: 5px 14px;">🏪 편의점</button>
         </div>
 
         <div class="book-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
