@@ -2468,12 +2468,23 @@ h4 {
   position: relative;
 }
 
+#shopping-modal .custom-modal-content {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
 .shopping-checklist {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 4px; /* 체크박스 아이템의 우측 하단 그림자가 잘리지 않도록 미세 패딩 부여 */
 }
 
 .shopping-item {
