@@ -12,6 +12,7 @@ export const state = {
   isFridgeOpen: false,
   showingAlternatives: false, // track whether showing alternative 6 recipes
   cookedCounts: {}, // 협업/테스트 검증을 위해 기본 조리 횟수를 비워두었습니다.
+  dislikedRecipeIds: new Set(), // 싫어하는 레시피 아이디 저장 Set
 
   // Recipe Carousel State
   carouselRecipes: [],
@@ -76,6 +77,15 @@ export function navigate(route, param) {
     state.cookingRecipeId = param;
     if (param) {
       state.cookedCounts[param] = (state.cookedCounts[param] || 0) + 1;
+      
+      // 조리 완료 시 해당 요리에 들어간 식재료(need)를 state.selected에서 자동 삭제 차감
+      let recipe = RECIPES.find(r => r.id === param);
+      if (!recipe) recipe = ALTERNATIVE_RECIPES.find(r => r.id === param);
+      if (recipe && recipe.need) {
+        recipe.need.forEach(ingId => {
+          state.selected.delete(ingId);
+        });
+      }
     }
   }
   if (route === 'rating') {
