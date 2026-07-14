@@ -10,7 +10,96 @@
 import { state, showToast, render, updateCarouselRecipes } from './app.js';
 import { INGREDIENTS } from './data.js';
 
+const CUSTOM_INGREDIENTS_KEY = 'customIngredients';
+const CUSTOM_INGREDIENT_CATEGORIES = new Set(['dairy', 'vegetable', 'meat', 'grain']);
+const CUSTOM_INGREDIENT_EMOJIS = {
+  dairy: '🥛',
+  vegetable: '🥦',
+  meat: '🥓',
+  grain: '🍞'
+};
+
+export function loadCustomIngredients() {
+  let storedIngredients;
+  try {
+    storedIngredients = localStorage.getItem(CUSTOM_INGREDIENTS_KEY);
+  } catch {
+    return [];
+  }
+  if (!storedIngredients) return [];
+
+  try {
+    const parsedIngredients = JSON.parse(storedIngredients);
+    return Array.isArray(parsedIngredients) ? parsedIngredients : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomIngredients(ingredients) {
+  const customIngredients = Array.isArray(ingredients) ? ingredients : [];
+  try {
+    localStorage.setItem(CUSTOM_INGREDIENTS_KEY, JSON.stringify(customIngredients));
+    return true;
+  } catch {
+    showToast('재료 저장에 실패했어요.');
+    return false;
+  }
+}
+
 let showCategoryCandidates = false;
+let pendingCustomIngredientName = '';
+let ingredientRenderObserver = null;
+
+function normalizeIngredientName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+function getCustomDeleteButtonMarkup(ingredient) {
+  if (!ingredient.isCustom) return '';
+  return `
+    <button type="button" data-delete-custom-ingredient="${ingredient.id}" aria-label="${ingredient.name} 삭제" style="margin-left: 4px; padding: 0 3px; border: 0; background: transparent; cursor: pointer;">×</button>
+  `;
+}
+
+function createCustomIngredientId(ingredients) {
+  const existingIds = new Set(ingredients.map((ingredient) => ingredient.id));
+  let suffix = 1;
+  let id = `custom-${Date.now()}`;
+  while (existingIds.has(id)) {
+    id = `custom-${Date.now()}-${suffix}`;
+    suffix += 1;
+  }
+  return id;
+}
+
+function addCustomIngredient(category) {
+  if (!CUSTOM_INGREDIENT_CATEGORIES.has(category)) return false;
+
+  const name = pendingCustomIngredientName.trim();
+  if (!name) return false;
+
+  const customIngredients = loadCustomIngredients();
+  const allIngredients = [...INGREDIENTS, ...customIngredients];
+  const normalizedName = normalizeIngredientName(name);
+  const isDuplicate = allIngredients.some(
+    (ingredient) => normalizeIngredientName(ingredient.name) === normalizedName
+  );
+  if (isDuplicate) return false;
+
+  const newIngredient = {
+    id: createCustomIngredientId(allIngredients),
+    name,
+    category,
+    emoji: CUSTOM_INGREDIENT_EMOJIS[category],
+    isCustom: true
+  };
+  customIngredients.push(newIngredient);
+  if (!saveCustomIngredients(customIngredients)) return false;
+  state.selected.add(newIngredient.id);
+  pendingCustomIngredientName = '';
+  return true;
+}
 
 function applyIngredientVisibility() {
   document.querySelectorAll('.fridge-cavity-interior .ingredient-sticker, .fridge-drawer-vegetable .ingredient-sticker').forEach((sticker) => {
@@ -43,6 +132,7 @@ function createFridgeSticker(ingredient) {
     <span class="sticker-chk">✔</span>
     <span class="sticker-emoji">${ingredient.emoji}</span>
     <span class="sticker-name">${ingredient.name}</span>
+    ${getCustomDeleteButtonMarkup(ingredient)}
   `;
   return sticker;
 }
@@ -51,7 +141,8 @@ function renderSelectedIngredientsInFridge() {
   document.querySelector('[data-selected-ingredients]')?.remove();
 
   const fridgeStickers = document.querySelectorAll('.fridge-cavity-interior .ingredient-sticker, .fridge-drawer-vegetable .ingredient-sticker');
-  const selectedIds = new Set(INGREDIENTS.filter((ingredient) => state.selected.has(ingredient.id)).map((ingredient) => ingredient.id));
+  const allIngredients = [...INGREDIENTS, ...loadCustomIngredients()];
+  const selectedIds = new Set(allIngredients.filter((ingredient) => state.selected.has(ingredient.id)).map((ingredient) => ingredient.id));
 
   fridgeStickers.forEach((sticker) => {
     if (!selectedIds.has(sticker.dataset.ing)) {
@@ -64,7 +155,7 @@ function renderSelectedIngredientsInFridge() {
     }
   });
 
-  INGREDIENTS.filter((ingredient) => selectedIds.has(ingredient.id)).forEach((ingredient) => {
+  allIngredients.filter((ingredient) => selectedIds.has(ingredient.id)).forEach((ingredient) => {
     const existing = document.querySelector(`.fridge-cavity-interior .ingredient-sticker[data-ing="${ingredient.id}"], .fridge-drawer-vegetable .ingredient-sticker[data-ing="${ingredient.id}"]`);
     if (existing) {
       existing.style.display = 'inline-flex';
@@ -121,14 +212,18 @@ function updateSearchResults() {
   if (!area) return;
 
   const search = state.search;
+  const allIngredients = [...INGREDIENTS, ...loadCustomIngredients()];
   const categoryMatches = state.activeCategory === 'all'
-    ? INGREDIENTS
-    : INGREDIENTS.filter((ingredient) => ingredient.category === state.activeCategory);
+    ? allIngredients
+    : allIngredients.filter((ingredient) => ingredient.category === state.activeCategory);
   const results = search
     ? categoryMatches.filter((ingredient) => ingredient.name.toLowerCase().includes(search))
     : showCategoryCandidates
       ? categoryMatches
       : [];
+  const hasAnyMatch = search
+    ? allIngredients.some((ingredient) => ingredient.name.toLowerCase().includes(search))
+    : false;
   const signature = `${search}|${state.activeCategory}|${showCategoryCandidates}|${results.map((ingredient) => `${ingredient.id}:${state.selected.has(ingredient.id)}`).join(',')}`;
   if (area.dataset.renderedSearch === signature) return;
 
@@ -145,6 +240,7 @@ function updateSearchResults() {
     }[character]));
     area.hidden = false;
     area.innerHTML = `
+      ${hasAnyMatch ? '' : `<button type="button" id="btn-add-custom-ingredient" data-ingredient-name="${escapedSearch}" style="margin-top: 8px;">&#39;${escapedSearch}&#39; \uCD94\uAC00\uD558\uAE30</button>`}
       <p style="margin: 0; font-size: 12px; color: var(--color-gray);">‘${escapedSearch}’에 대한 검색 결과가 없습니다.</p>
       <p style="margin: 4px 0 0; font-size: 11px; color: var(--color-gray);">다른 이름으로 검색해보세요.</p>
     `;
@@ -159,6 +255,7 @@ function updateSearchResults() {
         <span class="sticker-chk">✔</span>
         <span class="sticker-emoji">${ingredient.emoji}</span>
         <span class="sticker-name">${ingredient.name}</span>
+        ${getCustomDeleteButtonMarkup(ingredient)}
       </div>
     `).join('');
 
@@ -172,20 +269,50 @@ function updateSearchResults() {
 }
 
 export function initIngredient() {
+  if (window.__moduleEventHandlersActive) return;
   window.__moduleEventHandlersActive = true;
 
   const app = document.getElementById('app');
-  if (app) {
-    const renderObserver = new MutationObserver(() => {
+  if (app && !ingredientRenderObserver) {
+    ingredientRenderObserver = new MutationObserver(() => {
       applyIngredientVisibility();
       updateSearchResults();
     });
-    renderObserver.observe(app, { childList: true, subtree: true });
+    ingredientRenderObserver.observe(app, { childList: true, subtree: true });
   }
   applyIngredientVisibility();
   updateSearchResults();
 
   document.addEventListener('click', (event) => {
+    const deleteButton = event.target.closest('[data-delete-custom-ingredient]');
+    if (deleteButton) {
+      event.stopPropagation();
+      if (!confirm('이 재료를 삭제할까요?')) return;
+
+      const ingredientId = deleteButton.dataset.deleteCustomIngredient;
+      const customIngredients = loadCustomIngredients();
+      const nextIngredients = customIngredients.filter((ingredient) => ingredient.id !== ingredientId);
+      if (!saveCustomIngredients(nextIngredients)) return;
+      state.selected.delete(ingredientId);
+      render();
+      return;
+    }
+
+    const addButton = event.target.closest('#btn-add-custom-ingredient');
+    if (addButton) {
+      const name = state.search.trim();
+      const allIngredients = [...INGREDIENTS, ...loadCustomIngredients()];
+      const normalizedName = normalizeIngredientName(name);
+      const isDuplicate = allIngredients.some(
+        (ingredient) => normalizeIngredientName(ingredient.name) === normalizedName
+      );
+      if (!name || isDuplicate) return;
+
+      pendingCustomIngredientName = name;
+      showToast('카테고리를 선택해주세요.');
+      return;
+    }
+
     const sticker = event.target.closest('.ingredient-sticker');
     if (sticker) {
       const id = sticker.dataset.ing;
@@ -225,6 +352,16 @@ export function initIngredient() {
 
     const pocket = event.target.closest('.door-pocket');
     if (pocket) {
+      if (pendingCustomIngredientName && addCustomIngredient(pocket.dataset.cat)) {
+        state.activeCategory = pocket.dataset.cat;
+        showCategoryCandidates = true;
+        render();
+        applyIngredientVisibility();
+        updateSearchResults();
+        updateFooter();
+        return;
+      }
+
       state.activeCategory = pocket.dataset.cat;
       showCategoryCandidates = true;
       render();
@@ -263,6 +400,7 @@ export function initIngredient() {
   document.addEventListener('input', (event) => {
     if (!event.target.matches('#fridge-search-input')) return;
     state.search = event.target.value.toLowerCase().trim();
+    pendingCustomIngredientName = '';
     if (state.search) showCategoryCandidates = true;
     applyIngredientVisibility();
     updateSearchResults();
