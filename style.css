@@ -86,6 +86,7 @@ h4 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  column-gap: clamp(80px, 12vw, 180px);
 }
 
 .logo {
@@ -138,6 +139,7 @@ h4 {
 .nav {
   display: flex;
   gap: 6px;
+  margin: 0;
 }
 
 .nav-btn {
@@ -153,7 +155,6 @@ h4 {
 .nav-btn:hover {
   background-color: var(--color-mint-light);
   border-color: var(--color-mint);
-  transform: translateY(-2px);
 }
 
 .nav-btn.active {
@@ -184,18 +185,19 @@ h4 {
 }
 
 .page {
-  animation: pageSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15) forwards;
+  /* 기본 애니메이션은 제거하여 부분 렌더링 시 눈 피로 유발 방지 */
 }
 
-@keyframes pageSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.98);
-  }
+.page.route-change-active {
+  animation: softFadeIn 0.22s ease-out forwards;
+}
 
+@keyframes softFadeIn {
+  from {
+    opacity: 0.65;
+  }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -226,13 +228,12 @@ h4 {
 }
 
 .btn-sm:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 0 var(--color-charcoal) !important;
+  /* 모션 제거 */
 }
 
 .btn-sm:active {
   transform: translateY(2px) !important;
-  box-shadow: 0 1px 0 var(--color-charcoal) !important;
+  box-shadow: 0 2px 0 var(--color-charcoal) !important;
 }
 
 .btn-primary {
@@ -242,8 +243,6 @@ h4 {
 
 .btn-primary:hover {
   background-color: #ff9075;
-  transform: translateY(-3px);
-  box-shadow: 0 9px 0 var(--color-charcoal);
 }
 
 .btn-primary:active {
@@ -258,8 +257,6 @@ h4 {
 
 .btn-secondary:hover {
   background-color: #8cd6bf;
-  transform: translateY(-3px);
-  box-shadow: 0 9px 0 var(--color-charcoal);
 }
 
 .btn-secondary:active {
@@ -273,8 +270,6 @@ h4 {
 
 .btn-outline:hover {
   background-color: var(--color-gray-light);
-  transform: translateY(-3px);
-  box-shadow: 0 9px 0 var(--color-charcoal);
 }
 
 .btn-outline:active {
@@ -339,24 +334,105 @@ h4 {
 
 .home-hero-wrap {
   width: 100%;
-  max-width: 320px;
-  margin-bottom: 24px;
-  border: var(--border-thick);
-  border-radius: var(--br-md);
-  overflow: hidden;
-  box-shadow: 0 4px 0 var(--color-charcoal);
-  background-color: var(--color-mint-light);
-  aspect-ratio: 1;
+  max-width: 260px;
+  margin-bottom: 12px;
+  overflow: visible;
+  aspect-ratio: auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  animation: bunnyFloat 3s ease-in-out infinite;
 }
 
 .home-hero-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  image-rendering: -webkit-optimize-contrast;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 10px rgba(74, 62, 61, 0.12));
+  cursor: pointer;
+}
+
+@keyframes bunnyFloat {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* 홈 화면 캐릭터 주변 음식재료 데코 이모지 */
+.home-deco-item {
+  position: absolute;
+  font-size: 26px;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(2px 3px 0 rgba(74, 62, 61, 0.12));
+  z-index: 3;
+}
+
+.deco-carrot {
+  top: 10%;
+  left: -20px;
+  transform: rotate(-15deg);
+  animation: decoFloat1 4.5s ease-in-out infinite;
+}
+
+.deco-egg {
+  top: 5%;
+  right: -10px;
+  transform: rotate(20deg);
+  animation: decoFloat2 3.8s ease-in-out infinite;
+}
+
+.deco-tomato {
+  bottom: 25%;
+  left: -25px;
+  transform: rotate(-10deg);
+  animation: decoFloat2 4.8s ease-in-out infinite;
+}
+
+.deco-cheese {
+  bottom: 15%;
+  right: -20px;
+  transform: rotate(15deg);
+  animation: decoFloat1 4.2s ease-in-out infinite;
+}
+
+.deco-bread {
+  top: 40%;
+  right: -35px;
+  transform: rotate(-5deg);
+  animation: decoFloat2 4.6s ease-in-out infinite;
+}
+
+/* 뽀짝하게 위아래로 서서히 엇갈려 둥실대는 모션 키프레임들 */
+@keyframes decoFloat1 {
+  0% {
+    transform: translateY(0px) rotate(-15deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-10deg) scale(1.06);
+  }
+  100% {
+    transform: translateY(0px) rotate(-15deg);
+  }
+}
+
+@keyframes decoFloat2 {
+  0% {
+    transform: translateY(0px) rotate(15deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(20deg) scale(1.08);
+  }
+  100% {
+    transform: translateY(0px) rotate(15deg);
+  }
 }
 
 .home-title-badge {
@@ -984,12 +1060,11 @@ h4 {
 }
 
 .carousel-btn:hover {
-  transform: translateY(-55%) scale(1.08);
   background-color: var(--color-mint-light);
 }
 
 .carousel-btn:active {
-  transform: translateY(-45%) scale(0.95);
+  transform: translateY(-47%) scale(0.97);
   box-shadow: 0 2px 0 var(--color-charcoal);
 }
 
@@ -1066,7 +1141,7 @@ h4 {
 }
 
 .recipe-fav-toggle:hover {
-  transform: scale(1.1);
+  opacity: 0.85;
 }
 
 .recipe-fav-toggle.active {
@@ -1418,16 +1493,24 @@ h4 {
 
 .cooking-item-pan {
   font-size: 90px;
-  animation: cookSizzle 0.5s ease infinite alternate;
+  animation: cookJiggle 0.8s ease-in-out infinite;
 }
 
-@keyframes cookSizzle {
-  0% {
-    transform: scale(1) translateY(0) rotate(0deg);
+@keyframes cookJiggle {
+  0%, 100% {
+    transform: translateY(0) scaleY(1) rotate(0deg);
   }
-
-  100% {
-    transform: scale(1.05) translateY(-5px) rotate(4deg);
+  20% {
+    transform: translateY(2px) scaleY(0.95) rotate(-2deg);
+  }
+  40% {
+    transform: translateY(-8px) scaleY(1.06) rotate(4deg);
+  }
+  60% {
+    transform: translateY(1px) scaleY(0.98) rotate(-1deg);
+  }
+  80% {
+    transform: translateY(-3px) scaleY(1.02) rotate(2deg);
   }
 }
 
@@ -1826,6 +1909,10 @@ h4 {
     display: block;
   }
 
+  .header-inner {
+    column-gap: 0;
+  }
+
   .nav {
     display: none;
     /* hidden on mobile mobile menu triggers */
@@ -1837,6 +1924,8 @@ h4 {
     border-radius: var(--br-md);
     padding: 12px;
     flex-direction: column;
+    gap: 6px;
+    margin: 0;
     box-shadow: 0 6px 0 var(--color-shadow);
   }
 
@@ -2416,8 +2505,293 @@ h4 {
   color: var(--color-gray);
 }
 
+/* 이스터에그 토끼 음식 폭죽 파티클 */
+.bunny-burst-particle {
+  position: absolute;
+  font-size: 18px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  filter: drop-shadow(1px 2px 0 rgba(74, 62, 61, 0.1));
+  animation: burstExplode 1.1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
 
+@keyframes burstExplode {
+  0% { transform: translate(0, 0) scale(0.1) rotate(0deg); opacity: 1; }
+  15% { transform: translate(0, -5px) scale(0.5) rotate(0deg); opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.9) rotate(var(--rot)); opacity: 0; }
+}
 
+/* 🛒 장바구니 모달 - 씩씩하게 매달려 흔들흔들 춤추는 토끼 */
+.shopping-modal-bunny-wrap {
+  position: absolute;
+  top: -70px;
+  right: 50px;
+  width: 90px;
+  height: 90px;
+  z-index: 10;
+  pointer-events: none;
+}
+.shopping-modal-bunny {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(2px 4px 0 rgba(74, 62, 61, 0.12));
+  animation: bunnyDangle 2.5s ease-in-out infinite;
+}
+@keyframes bunnyDangle {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+
+/* 🥦 냉장고 화면 - 배고파서 꼬르륵하며 몸이 시무룩 찌부되는 토끼 */
+.fridge-hungry-bunny-wrap {
+  width: 140px; /* 모바일에서 더 큼직하게 확대 */
+  margin: 25px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+.fridge-hungry-bunny {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(2px 4px 0 rgba(74, 62, 61, 0.12));
+  animation: hungryDroop 3.2s ease-in-out infinite;
+  cursor: pointer; /* 클릭 유도 포인터 */
+}
+@keyframes hungryDroop {
+  0%, 100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(5px) scaleY(0.94);
+  }
+}
+
+/* 꼬르륵 말풍선 효과 - 클릭 시 띠용 팝업 트랜지션 (평상시 숨김) */
+.hungry-bubble {
+  background: var(--color-white);
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--font-hand);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  white-space: nowrap;
+  position: relative;
+  z-index: 11;
+
+  /* 평상시 숨김 속성 및 닌텐도 팝업 트랜지션 장착 */
+  opacity: 0;
+  transform: translateY(12px) scale(0.85);
+  pointer-events: none;
+  margin-bottom: -15px;
+  transition: opacity 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              margin-bottom 0.3s ease;
+}
+
+/* 클릭하여 활성화 시 솟아오르며 띠용 출현 */
+.hungry-bubble.show-bubble {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  margin-bottom: 4px;
+}
+
+.hungry-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: var(--color-white) transparent;
+  display: block;
+  width: 0;
+}
+.hungry-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px 8px 0;
+  border-style: solid;
+  border-color: var(--color-charcoal) transparent;
+  display: block;
+  width: 0;
+  z-index: -1;
+}
+
+/* 태블릿/PC 환경 (넓은 화면) - 냉장고 우측에 크게 배치되어 냉장고를 직시 */
+@media (min-width: 768px) {
+  .interactive-fridge-container {
+    position: relative;
+    overflow: visible; /* 토끼가 옆으로 삐져나갈 수 있게 허용 */
+  }
+  .fridge-hungry-bunny-wrap {
+    position: absolute;
+    right: -100px; /* 우측으로 치우치던 것을 70px 좌측으로 바짝 당김! */
+    bottom: 20px;
+    margin: 0;
+    width: 240px; /* 데스크톱 210px 거대 스펙 고정 */
+  }
+  .hungry-bubble.show-bubble {
+    margin-bottom: 6px;
+  }
+  .hungry-bubble::after {
+    left: 45%;
+  }
+  .hungry-bubble::before {
+    left: 45%;
+  }
+}
+
+/* 😵 별점 평가 화면 - 물고기 태워서 눈 돌고 땀 삐질삐질 바르르 떠는 토끼 */
+.rating-mascot-wrap {
+  width: 100px;
+              transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              margin-bottom 0.3s ease;
+}
+
+/* 클릭하여 활성화 시 솟아오르며 띠용 출현 */
+.hungry-bubble.show-bubble {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  margin-bottom: 4px;
+}
+
+.hungry-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: var(--color-white) transparent;
+  display: block;
+  width: 0;
+}
+.hungry-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px 8px 0;
+  border-style: solid;
+  border-color: var(--color-charcoal) transparent;
+  display: block;
+  width: 0;
+  z-index: -1;
+}
+
+/* 태블릿/PC 환경 (넓은 화면) - 냉장고 우측에 크게 배치되어 냉장고를 직시 */
+@media (min-width: 768px) {
+  .interactive-fridge-container {
+    position: relative;
+    overflow: visible; /* 토끼가 옆으로 삐져나갈 수 있게 허용 */
+  }
+  .fridge-hungry-bunny-wrap {
+    position: absolute;
+    right: -100px; /* 우측으로 치우치던 것을 70px 좌측으로 바짝 당김! */
+    bottom: 20px;
+    margin: 0;
+    width: 240px; /* 데스크톱 210px 거대 스펙 고정 */
+  }
+  .hungry-bubble.show-bubble {
+    margin-bottom: 6px;
+  }
+  .hungry-bubble::after {
+    left: 45%;
+  }
+  .hungry-bubble::before {
+    left: 45%;
+  }
+}
+
+/* 😵 별점 평가 화면 - 물고기 태워서 눈 돌고 땀 삐질삐질 바르르 떠는 토끼 */
+.rating-mascot-wrap {
+  width: 100px;
+  height: 100px;
+  margin-right: -10px;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.rating-mascot-img {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(2px 4px 0 rgba(74, 62, 61, 0.12));
+  animation: ratingTilt 2.2s ease-in-out infinite alternate;
+}
+@keyframes ratingTilt {
+  0% {
+    transform: rotate(-3.5deg) translateY(0);
+  }
+  100% {
+    transform: rotate(3.5deg) translateY(-4px); /* 느긋하게 둥실 뜨며 고개 까딱 */
+  }
+}
+
+/* 🍮 1번 애니메이션: 식재료 스티커 젤리 쫀득 팝 (마음에 안 들면 이 영역 삭제 가능) */
+.pop-jelly {
+  animation: jellyStretch 0.35s ease-out forwards;
+}
+@keyframes jellyStretch {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scaleX(1.25) scaleY(0.75); /* 양옆으로 납작하게 찌부러짐 */
+  }
+  60% {
+    transform: scaleX(0.85) scaleY(1.2);  /* 위아래로 쫀득하게 늘어남 */
+  }
+  80% {
+    transform: scaleX(1.05) scaleY(0.95); /* 가볍게 반동 바운스 */
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ❤️ 하트 클릭 찜 활성화 팝업 파티클 효과 */
+.heart-burst-particle {
+  position: absolute;
+  font-size: 16px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  filter: drop-shadow(1px 2px 0 rgba(74, 62, 61, 0.08));
+  animation: heartExplode 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes heartExplode {
+  0% {
+    transform: translate(0, 0) scale(0.2) rotate(0deg);
+    opacity: 1;
+  }
+  15% {
+    transform: translate(0, -8px) scale(0.6) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.95) rotate(var(--rot));
+    opacity: 0;
+  }
+}
 
 
 

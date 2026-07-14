@@ -39,7 +39,7 @@ export function initRecipe() {
     }
 
     if (event.target.closest('#btn-view-shopping')) {
-      showToast('부족한 재료를 장바구니에 담았습니다! 🛒');
+      showToast('장바구니에 담았습니다!');
       return;
     }
 
@@ -59,7 +59,7 @@ export function initRecipe() {
     if (choice) {
       state.ratingFeedback = choice.dataset.choice;
       render();
-      showToast('💌 평가를 반영했어요. 감사합니다!');
+      showToast('평가를 반영했어요!');
       return;
     }
 
@@ -72,6 +72,5 @@ export function initRecipe() {
     }
   });
 }
-
 
 
