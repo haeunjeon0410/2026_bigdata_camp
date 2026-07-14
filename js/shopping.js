@@ -4,6 +4,40 @@
 //------------------------------------
 /* 장보기 기능 모듈 */
 
+const SHOPPING_STORAGE_KEY = 'shoppingList';
+
+export function getShoppingItems() {
+  try {
+    const items = JSON.parse(localStorage.getItem(SHOPPING_STORAGE_KEY) || '[]');
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveShoppingItems(items) {
+  const safeItems = Array.isArray(items) ? items : [];
+  localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(safeItems));
+  return safeItems;
+}
+
+export function addShoppingItems(items) {
+  const currentItems = getShoppingItems();
+  const savedKeys = new Set(currentItems.map((item) =>
+    `${item.recipeId}-${String(item.ingredientName || '').trim()}`
+  ));
+  const addedItems = (Array.isArray(items) ? items : []).filter((item) => {
+    const ingredientName = String(item?.ingredientName || '').trim();
+    const key = `${item.recipeId}-${ingredientName}`;
+    if (!ingredientName || savedKeys.has(key)) return false;
+    savedKeys.add(key);
+    return true;
+  });
+
+  saveShoppingItems([...currentItems, ...addedItems]);
+  return addedItems;
+}
+
 export function initShopping() {
   document.addEventListener('click', (event) => {
     // 장바구니 모달 열기
