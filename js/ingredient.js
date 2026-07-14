@@ -4,6 +4,9 @@
 //------------------------------------
 /* 재료 기능 모듈 */
 
+// ✅ 확인만
+// ⬜ TODO(신규)
+
 import { state, showToast, render, updateCarouselRecipes } from './app.js';
 import { INGREDIENTS } from './data.js';
 
