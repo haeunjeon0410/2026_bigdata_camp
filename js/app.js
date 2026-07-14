@@ -1,4 +1,5 @@
 import { INGREDIENTS, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { applyRecipeFilters, decorateRecipeCard } from './recommend.js';
 
 // Initial State Management
 export const state = {
@@ -7,6 +8,8 @@ export const state = {
   activeCategory: 'all',
   favorites: new Set(),
   route: 'home',
+  // 메뉴바 레시피 탭과 냉장고에서 진입한 추천 캐러셀을 구분합니다.
+  recipeViewMode: 'menu', // 'menu' | 'carousel'
 
   // Refrigerator open state
   isFridgeOpen: false,
@@ -22,6 +25,7 @@ export const state = {
   // Detail page param
   currentDetail: null,
   detailBackRoute: 'recipes', // track where we came from ('recipes' or 'mypage')
+  detailBackRecipeView: 'menu', // detail 진입 전 레시피 화면 ('menu' | 'carousel')
 
   // Cooking Flow Parameters
   cookingRecipeId: null,
@@ -34,6 +38,8 @@ export const state = {
 
 let cookingIntervalId = null;
 let cookingTimeoutId = null;
+let normalizeSubstituteTips = () => [];
+let renderSubstituteTips = () => '';
 
 // Toast notification Helper
 export function showToast(msg) {
@@ -53,11 +59,10 @@ export function navigate(route, param) {
   }
   if (route === 'detail') {
     state.currentDetail = param;
-    // Track previous screen before entering detail view
-    if (state.route === 'recipes' || state.route === 'mypage') {
+    // 오직 상세 카드 외부에서 처음 진입하는 순간에만 최초 진입 경로를 기억하여 유실되지 않도록 잠금 보존합니다.
+    if (state.route !== 'detail') {
       state.detailBackRoute = state.route;
-    } else {
-      state.detailBackRoute = 'recipes';
+      state.detailBackRecipeView = state.route === 'recipes' ? state.recipeViewMode : null;
     }
   }
 
@@ -121,14 +126,30 @@ export function navigate(route, param) {
 }
 
 // Update sorted carousel recipe lists relative to selections
+function calculateMissingIngredients(recipe) {
+  // 편의점 레시피는 need가 대표 재료 ID만 가지고 있어 기존 상세 missing 목록을 사용합니다.
+  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing) && recipe.missing.length) {
+    return [...recipe.missing];
+  }
+
+  const need = recipe.need || [];
+  return need
+    .map((ingredientId, index) => state.selected.has(ingredientId)
+      ? null
+      : recipe.ingredients?.[index] || recipe.missing?.[index] || ingredientId)
+    .filter(Boolean);
+}
+
 export function updateCarouselRecipes() {
   // If showing alternatives, pull from ALTERNATIVE_RECIPES database
   const sourcePool = state.showingAlternatives ? ALTERNATIVE_RECIPES : RECIPES;
   const list = [...sourcePool].map(r => {
-    const total = r.need.length;
-    const matched = r.need.filter(id => state.selected.has(id)).length;
+    const need = r.need || [];
+    const total = need.length;
+    const missing = calculateMissingIngredients(r);
+    const matched = need.filter(id => state.selected.has(id)).length;
     const rate = total === 0 ? 0 : Math.round((matched / total) * 100);
-    return { ...r, matched, total, rate };
+    return { ...r, missing, matched, total, rate };
   });
 
   // Sort: highest match rate first. If match rate is equal, sort by cooking time
@@ -140,6 +161,7 @@ export function updateCarouselRecipes() {
 document.addEventListener('click', (e) => {
   const navEl = e.target.closest('[data-nav]');
   if (navEl) {
+    if (navEl.dataset.nav === 'recipes') state.recipeViewMode = 'menu';
     navigate(navEl.dataset.nav);
   }
 
@@ -148,18 +170,26 @@ document.addEventListener('click', (e) => {
     showCreditsModal();
   }
 
-  // ◀, ▶ 버튼 및 페이지네이션 도트 클릭 시 넘김 방향 감지하여 캐시 기록
+  // ◀, ▶ 버튼 및 페이지네이션 도트 클릭 시 넘김 방향 감지, 인덱스 롤링 및 렌더 동기식 수행!
   const prevBtn = e.target.closest('#btn-carousel-prev');
   const nextBtn = e.target.closest('#btn-carousel-next');
   const dotBtn = e.target.closest('.carousel-dot');
 
-  if (prevBtn) {
-    state.carouselDirection = 'left';
-  } else if (nextBtn) {
-    state.carouselDirection = 'right';
+  if (prevBtn || nextBtn) {
+    const length = state.carouselRecipes.length;
+    if (length > 0) {
+      state.carouselDirection = prevBtn ? 'left' : 'right';
+      const offset = prevBtn ? -1 : 1;
+      state.currentCarouselIndex = (state.currentCarouselIndex + offset + length) % length;
+      render();
+    }
   } else if (dotBtn) {
     const targetIdx = parseInt(dotBtn.dataset.index, 10);
-    state.carouselDirection = targetIdx > state.currentCarouselIndex ? 'right' : 'left';
+    if (!isNaN(targetIdx)) {
+      state.carouselDirection = targetIdx > state.currentCarouselIndex ? 'right' : 'left';
+      state.currentCarouselIndex = targetIdx;
+      render();
+    }
   } else {
     // 일반 라우팅이나 다른 클릭 시에는 초기화
     state.carouselDirection = null;
@@ -217,6 +247,12 @@ export function render() {
   window.__routingActive = false; // 플래그 초기화
 
   app.innerHTML = `<div class="page ${isRouteChanged ? 'route-change-active' : ''}">${html}</div>`;
+
+  // 💥 전체 메뉴 격자판('menu') 모드 복귀 시 동기적 리렌더링 강제 동기화 수행!
+  if (state.route === 'recipes' && state.recipeViewMode === 'menu') {
+    applyRecipeFilters();
+    decorateRecipeCard();
+  }
 }
 
 /* ==================== 1. HOME SCREEN RENDER ==================== */
@@ -444,20 +480,8 @@ function renderRecipes() {
     <span class="carousel-dot ${idx === currentIdx ? 'active' : ''}" data-index="${idx}"></span>
   `).join('');
 
-  // Render missing ingredients layout
-  const missingHtml = currentRecipe.missing.length > 0
-    ? `
-      <div class="recipe-missing-box">
-        <div class="recipe-missing-title">🧾 부족한 재료 (${currentRecipe.missing.length})</div>
-        <div class="recipe-missing-items">${currentRecipe.missing.join(', ')}</div>
-      </div>
-    `
-    : `
-      <div class="recipe-missing-box" style="border-color: var(--color-mint); border-left-color: var(--color-mint); background-color: var(--color-mint-light);">
-        <div class="recipe-missing-title" style="color: var(--color-mint-deep)">✨ 완벽해요!</div>
-        <div class="recipe-missing-items" style="color: var(--color-mint-deep)">필요한 재료가 모두 준비되어 있어요!</div>
-      </div>
-    `;
+  const missingHtml = renderMissingIngredientsGuidance(currentRecipe);
+
 
   return `
     <div class="recipes-container">
@@ -516,6 +540,57 @@ function renderRecipes() {
   `;
 }
 
+function escapeHtmlForUi(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderMissingIngredientsGuidance(recipe) {
+  const missing = Array.isArray(recipe?.missing) ? recipe.missing : [];
+  const tips = normalizeSubstituteTips(recipe);
+  const normalize = (value) => String(value ?? '').trim().toLowerCase();
+  const applicableTips = tips.filter((tip) =>
+    missing.some((ingredient) => normalize(ingredient) === normalize(tip.original))
+  );
+  const substituteOriginals = new Set(applicableTips.map((tip) => normalize(tip.original)));
+  const unresolved = missing.filter((ingredient) => !substituteOriginals.has(normalize(ingredient)));
+
+  if (missing.length === 0) {
+    return `
+      <div class="recipe-missing-box" style="border-color: var(--color-mint); border-left-color: var(--color-mint); background-color: var(--color-mint-light);">
+        <div class="recipe-missing-title" style="color: var(--color-mint-deep)">✨ 완벽해요!</div>
+        <div class="recipe-missing-items" style="color: var(--color-mint-deep)">필요한 재료가 모두 준비되어 있어요!</div>
+      </div>
+    `;
+  }
+
+  if (applicableTips.length > 0) {
+    const substitutions = applicableTips.map((tip) =>
+      `${escapeHtmlForUi(tip.original)} 대신 ${tip.alternatives.map(escapeHtmlForUi).join(', ')}를 사용해보세요.`
+    );
+    if (unresolved.length > 0) {
+      substitutions.push(`여전히 필요한 재료: ${unresolved.map(escapeHtmlForUi).join(', ')}`);
+    }
+    return `
+      <div class="recipe-missing-box">
+        <div class="recipe-missing-title">💡 대체 재료로 만들 수 있어요!</div>
+        <div class="recipe-missing-items">${substitutions.join('<br>')}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="recipe-missing-box">
+      <div class="recipe-missing-title">🛒 재료가 조금 부족해요!</div>
+      <div class="recipe-missing-items">${missing.map(escapeHtmlForUi).join(', ')}</div>
+    </div>
+  `;
+}
+
 /* ==================== 4. RECIPE DETAIL SCREEN RENDER ==================== */
 function renderDetail(id) {
   // Find in normal recipes or alternatives
@@ -530,7 +605,13 @@ function renderDetail(id) {
   if (!recipe) return `<p style="text-align:center; padding: 40px;">레시피 정보가 올바르지 않아요.</p>`;
 
   // Dynamic back button text based on tracking state
-  const backLabel = state.detailBackRoute === 'mypage' ? '◀ 마이페이지' : '◀ 추천 목록';
+  const backLabel = state.detailBackRoute === 'mypage'
+    ? '◀ 마이페이지'
+    : state.detailBackRecipeView === 'carousel'
+      ? '◀ 추천 캐러셀'
+      : '◀ 레시피';
+
+  const substituteTipsHtml = renderSubstituteTips(recipe);
 
   // Draw Grocery Receipt for convenience store combo
   if (isAlt) {
@@ -586,6 +667,7 @@ function renderDetail(id) {
           </div>
         </div>
         
+        ${substituteTipsHtml}
         <div class="detail-actions-tray" style="margin-top:20px; display:flex; justify-content:center;">
           <button class="btn btn-primary" id="btn-start-cooking" data-recipe-id="${recipe.id}" style="flex: none; max-width: 280px; width: 100%;">
             이 조합 조리 시작! 💸
@@ -596,15 +678,16 @@ function renderDetail(id) {
   }
 
   // Calculate matching stats
-  const total = recipe.need.length;
-  const matched = recipe.need.filter(mid => state.selected.has(mid)).length;
+  const total = (recipe.need || []).length;
+  const missing = calculateMissingIngredients(recipe);
+  const matched = (recipe.need || []).filter(id => state.selected.has(id)).length;
   const rate = total === 0 ? 0 : Math.round((matched / total) * 100);
 
   const isFav = state.favorites.has(recipe.id);
 
   // Missing ingreds
-  const missingLabel = recipe.missing.length > 0
-    ? recipe.missing.join(', ')
+  const missingLabel = missing.length > 0
+    ? missing.join(', ')
     : '부족한 재료 없음';
 
   return `
@@ -646,6 +729,7 @@ function renderDetail(id) {
              </div>
           </div>
           
+          ${substituteTipsHtml}
           <!-- Steps Memo Pad -->
           <div class="notebook-notepad">
             <h4 class="notepad-title">👩🍳 주방 순서</h4>
@@ -987,8 +1071,6 @@ document.addEventListener('DOMContentLoaded', () => {
   navigate('home');
 });
 
-
-
 /* ==================== 🐰 DEVELOPER CREDITS EASTER EGG MODAL ==================== */
 export function showCreditsModal() {
   let modal = document.getElementById('credits-modal');
@@ -1081,6 +1163,8 @@ Promise.all([
   favoriteMod,
   shoppingMod
 ]) => {
+  normalizeSubstituteTips = recipeMod.normalizeSubstituteTips || (() => []);
+  renderSubstituteTips = recipeMod.renderSubstituteTips || (() => '');
   ingredientMod.initIngredient();
   recommendMod.initRecommend();
   recipeMod.initRecipe();
