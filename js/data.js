@@ -113,22 +113,3 @@ export function getRecipes() { return RECIPES; }
 export function getAlternativeRecipes() { return ALTERNATIVE_RECIPES; }
 export function findIngredient(ingredientId) { return INGREDIENTS.find((ingredient) => ingredient.id === ingredientId); }
 export function findRecipe(recipeId) { return [...RECIPES, ...ALTERNATIVE_RECIPES].find((recipe) => recipe.id === recipeId); }
-
-// js/data.js 맨 아래에 추가해보세요!
-import { supabase } from './supabase.js' // 1단계에서 만든 client 불러오기
-
-async function checkConnection() {
-  const { data, error } = await supabase
-    .from('recipes') // 아까 생성한 Supabase 테이블 이름
-    .select('*')
-    .limit(1)
-
-  if (error) {
-    console.error('❌ Supabase 연결 실패:', error.message)
-  } else {
-    console.log('✅ Supabase 연결 성공! 데이터:', data)
-  }
-}
-
-// 파일이 로드되자마자 콘솔에 찍히도록 실행
-checkConnection()
