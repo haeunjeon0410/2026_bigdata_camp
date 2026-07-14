@@ -6,8 +6,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
 // 1. Supabase 접속 설정 (세팅 완료 시 여기에 입력)
-const SUPABASE_URL = 'https://trxvoqxuyyjyfmvpdxkx.supabase.co/rest/v1/recipes'; // 예: 'https://your-project.supabase.co'
+const SUPABASE_URL = 'https://trxvoqxuyyjyfmvpdxkx.supabase.co'; // 예: 'https://your-project.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_CsMIpkJEDF3VKvKs4mfVIw_6OudaQvS'; // 예: 'your-anon-key'
+
 
 export const supabase = (SUPABASE_URL && SUPABASE_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_KEY) 

@@ -1,0 +1,12 @@
+# Local Supabase credentials
+js/supabase.config.js
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# Local editor/OS files
+.DS_Store
+Thumbs.db
+
