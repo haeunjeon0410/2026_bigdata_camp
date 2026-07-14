@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🧺 냉장고를 부탁해 : 자취생편 | 쉽고 귀여운 오늘 한 끼 레시피</title>
+  <title>냉장고를 부탁해 : 자취생편 | 쉽고 귀여운 오늘 한 끼 레시피</title>
   <meta name="description" content="냉장고에 남은 음식 재료들을 선택해 아기자기한 감성으로 나만의 맞춤형 요리를 추천받으세요! 자취생 최적화 레시피 서비스.">
   <meta name="keywords" content="냉장고를 부탁해, 자취생 요리, 남은 재료 요리, 혼밥, 간편 레시피">
   <!-- Google Fonts: Gaegu (cute handwriting) and Gowun Dodum (neat rounded font) -->
@@ -46,10 +46,10 @@
         </div>
       </div>
       <nav class="nav">
-        <button class="nav-btn active" id="nav-home" data-nav="home">🏠 시작</button>
-        <button class="nav-btn" id="nav-fridge" data-nav="fridge">🧺 내 냉장고</button>
-        <button class="nav-btn" id="nav-recipes" data-nav="recipes">🍳 추천 레시피</button>
-        <button class="nav-btn" id="nav-mypage" data-nav="mypage">👤 마이페이지</button>
+        <button class="nav-btn active" id="nav-home" data-nav="home">홈</button>
+        <button class="nav-btn" id="nav-fridge" data-nav="fridge">내 냉장고</button>
+        <button class="nav-btn" id="nav-recipes" data-nav="recipes">레시피</button>
+        <button class="nav-btn" id="nav-mypage" data-nav="mypage">마이페이지</button>
       </nav>
       <button class="hamburger" id="hamburger" aria-label="메뉴 열기">🌳</button>
     </div>
@@ -63,13 +63,13 @@
   <!-- ❤️ 취향 및 상황 선택 모달 UI (기본 숨김 상태) -->
   <div id="taste-modal" class="custom-modal-overlay">
     <div class="custom-modal-content taste-modal-content">
-      <h3 class="modal-title" style="font-size: 22px; margin-bottom: 8px;">❤️ 취향 및 상황 선택</h3>
+      <h3 class="modal-title" style="font-size: 22px; margin-bottom: 8px;">취향 및 상황 선택</h3>
       <p class="modal-subtitle" style="font-size: 13px; color: var(--color-gray); margin-bottom: 24px; word-break: keep-all;">
         추천을 더 정확하게 하기 위해 원하는 옵션을 선택해주세요.<br/>(선택 사항)
       </p>
-      
+
       <div class="taste-section">
-        <h4 class="taste-section-title">✨ 취향</h4>
+        <h4 class="taste-section-title">취향</h4>
         <div class="chip-container">
           <button class="chip-btn active">🌶️ 매운 음식</button>
           <button class="chip-btn">🥗 다이어트</button>
@@ -85,7 +85,7 @@
       </div>
       
       <div class="taste-section" style="margin-top: 20px; margin-bottom: 25px;">
-        <h4 class="taste-section-title">🏠 상황</h4>
+        <h4 class="taste-section-title">상황</h4>
         <div class="chip-container">
           <button class="chip-btn">⏰ 10분 안에</button>
           <button class="chip-btn active">🏠 혼밥</button>
@@ -106,8 +106,14 @@
   <!-- 🛒 장바구니 리스트 모달 UI -->
   <div id="shopping-modal" class="custom-modal-overlay">
     <div class="custom-modal-content" style="max-width: 450px; width: 90%; padding: 30px; border: var(--border-thick); border-radius: var(--br-lg); box-shadow: 0 8px 0 var(--color-charcoal); position: relative;">
+
+      <!-- 씩씩하게 장보는 뽀짝 토끼 배치 -->
+      <div class="shopping-modal-bunny-wrap">
+        <img src="shop.png" class="shopping-modal-bunny" alt="장보기 토끼" />
+      </div>
+
       <button class="modal-close" id="btn-shopping-modal-close" style="position: absolute; right: 20px; top: 15px; background: none; border: none; font-size: 20px; font-weight: bold; cursor: pointer; color: var(--color-charcoal);">✖</button>
-      <h3 class="modal-title" style="font-size: 22px; margin-bottom: 8px;">🛒 내 장바구니</h3>
+      <h3 class="modal-title" style="font-size: 22px; margin-bottom: 8px;">장보기 리스트</h3>
       <p class="modal-subtitle" style="font-size: 13px; color: var(--color-gray); margin-bottom: 20px;">부족해서 담아둔 재료의 체크리스트입니다.</p>
       
       <ul class="shopping-checklist">

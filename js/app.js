@@ -1,4 +1,4 @@
-import { INGREDIENTS, CATEGORIES, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { INGREDIENTS, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
 
 // Initial State Management
 export const state = {
@@ -30,6 +30,9 @@ export const state = {
   mypageDifficultyFilter: 'all' // 'all', '쉬움', '보통', '어려움'
 };
 
+let cookingIntervalId = null;
+let cookingTimeoutId = null;
+
 // Toast notification Helper
 export function showToast(msg) {
   const t = document.getElementById('toast');
@@ -42,6 +45,10 @@ export function showToast(msg) {
 
 // Router and View Changer
 export function navigate(route, param) {
+  window.__routingActive = true; // 라우팅 전환 애니메이션 플래그 ON
+  if (route !== 'cooking') {
+    clearCookingFlowTimers();
+  }
   if (route === 'detail') {
     state.currentDetail = param;
     // Track previous screen before entering detail view
@@ -173,7 +180,10 @@ export function render() {
       html = renderHome();
   }
 
-  app.innerHTML = `<div class="page">${html}</div>`;
+  const isRouteChanged = window.__routingActive;
+  window.__routingActive = false; // 플래그 초기화
+
+  app.innerHTML = `<div class="page ${isRouteChanged ? 'route-change-active' : ''}">${html}</div>`;
 }
 
 /* ==================== 1. HOME SCREEN RENDER ==================== */
@@ -182,12 +192,19 @@ function renderHome() {
     <div class="home-container">
       <div class="home-card">
         <div class="home-hero-wrap">
-          <img src="1.png" alt="내 냉장고 메인 일러스트" class="home-hero-img" />
+          <!-- 둥둥 뜨는 토끼 주위에 흩날리는 재료 이모지 데코 -->
+          <span class="home-deco-item deco-carrot" aria-hidden="true">🥕</span>
+          <span class="home-deco-item deco-egg" aria-hidden="true">🍳</span>
+          <span class="home-deco-item deco-tomato" aria-hidden="true">🍅</span>
+          <span class="home-deco-item deco-cheese" aria-hidden="true">🧀</span>
+          <span class="home-deco-item deco-bread" aria-hidden="true">🍞</span>
+
+          <img src="character.png" alt="귀여운 토끼 요리사 메인 캐릭터" class="home-hero-img" />
         </div>
-        <div class="home-title-badge">🧺 자취생 맞춤 레시피 </div>
+        <div class="home-title-badge">자취생 맞춤 레시피 </div>
         <h1 class="home-main-title">오늘 냉장고에<br/>뭐가 남아있나요?</h1>
         <p class="home-desc">남은 재료로 맛있고 알뜰하게 요리해보세요.<br/></p>
-        <button class="btn btn-primary home-cta-btn" id="btn-start-fridge">내 냉장고 시작하기 🧺</button>
+        <button class="btn btn-primary home-cta-btn" id="btn-start-fridge">시작하기</button>
       </div>
     </div>
   `;
@@ -241,12 +258,12 @@ function renderFridge() {
 
   return `
     <div class="fridge-header">
-      <h2 class="fridge-title">🧺 내 냉장고 채우기</h2>
-      <p class="fridge-subtitle">냉장고를 톡톡 눌러서 열고, 식재료를 꺼내 바구니에 담아봐요!</p>
+      <h2 class="fridge-title">재료 찾기</h2>
+      <p class="fridge-subtitle">냉장고를 열고, 식재료를 꺼내 바구니에 담아봐요!</p>
     </div>
     
     <div class="interactive-fridge-container">
-      <div class="interactive-fridge ${isOpen ? 'fridge-open' : ''}">
+      <div class="interactive-fridge ${isOpen ? "fridge-open" : ""}">
         <div class="fridge-cabinet">
           
           <!-- Freezer Section (stays closed, holds search) -->
@@ -255,7 +272,7 @@ function renderFridge() {
               <span class="freezer-brand">FREEZER</span>
               <div class="search-magnet-note">
                 <span class="magnet-pin">📌</span>
-                <input type="text" id="fridge-search-input" placeholder="재료 검색 및 필터! 🔍" value="${state.search}" />
+                <input type="text" id="fridge-search-input" placeholder="재료를 검색하세요!" value="${state.search}" />
               </div>
             </div>
           </div>
@@ -298,7 +315,7 @@ function renderFridge() {
             <div class="fridge-swing-door" id="interactive-fridge-door">
               <div class="door-front">
                 <div class="fridge-handle"></div>
-                <div class="click-to-open-sticker">냉장고 문 열기 🚪</div>
+                <div class="click-to-open-sticker">냉장고 문 열기</div>
                 <div class="fridge-postits">
                   <div class="postit p1">오늘 요리는? 🥞</div>
                   <div class="postit p2">자취생 편 🌳</div>
@@ -308,19 +325,19 @@ function renderFridge() {
               <div class="door-back">
                 <div class="door-pocket-title">문 수납공간 (카테고리)</div>
                 <div class="door-pockets-wrapper">
-                  <div class="door-pocket ${state.activeCategory === 'all' ? 'active' : ''}" data-cat="all">
+                  <div class="door-pocket ${state.activeCategory === "all" ? "active" : ""}" data-cat="all">
                     <span>✨</span> 전체 식재료
                   </div>
-                  <div class="door-pocket ${state.activeCategory === 'dairy' ? 'active' : ''}" data-cat="dairy">
+                  <div class="door-pocket ${state.activeCategory === "dairy" ? "active" : ""}" data-cat="dairy">
                     <span>🥛</span> 유제품·달걀
                   </div>
-                  <div class="door-pocket ${state.activeCategory === 'vegetable' ? 'active' : ''}" data-cat="vegetable">
+                  <div class="door-pocket ${state.activeCategory === "vegetable" ? "active" : ""}" data-cat="vegetable">
                     <span>🥦</span> 채소·과일
                   </div>
-                  <div class="door-pocket ${state.activeCategory === 'meat' ? 'active' : ''}" data-cat="meat">
+                  <div class="door-pocket ${state.activeCategory === "meat" ? "active" : ""}" data-cat="meat">
                     <span>🥓</span> 고기·가공품
                   </div>
-                  <div class="door-pocket ${state.activeCategory === 'grain' ? 'active' : ''}" data-cat="grain">
+                  <div class="door-pocket ${state.activeCategory === "grain" ? "active" : ""}" data-cat="grain">
                     <span>🍞</span> 곡류·식사
                   </div>
                 </div>
@@ -335,16 +352,24 @@ function renderFridge() {
           <div class="fridge-leg-pin"></div>
         </div>
       </div>
+
+      <!-- 냉장고 우측에서 냉장고를 직시하며 굶주리는 토끼 배치 (업사이징 및 간소화 텍스트) -->
+      <div class="fridge-hungry-bunny-wrap">
+        <div class="hungry-bubble">
+          <span>배고파.. </span>
+        </div>
+        <img src="hungry.png" class="fridge-hungry-bunny" alt="냉장고 바라보는 배고픈 토끼" />
+      </div>
     </div>
     
     <!-- Compact bottom actions instead of full fixed footer -->
     <div class="fridge-bottom-actions">
       <div class="selected-status">
-        🧺 총 <span>${state.selected.size}</span>개 선택함
+        총 <span>${state.selected.size}</span>개 선택함
       </div>
       <div class="action-buttons">
-        <button class="btn btn-outline btn-sm" id="btn-fridge-clear" ${state.selected.size === 0 ? 'disabled' : ''}>🗑️ 비우기</button>
-        <button class="btn btn-secondary btn-sm" id="btn-suggest-recipes" ${state.selected.size === 0 ? 'disabled' : ''}>레시피 추천받기 →</button>
+        <button class="btn btn-outline btn-sm" id="btn-fridge-clear" ${state.selected.size === 0 ? "disabled" : ""}>초기화</button>
+        <button class="btn btn-secondary btn-sm" id="btn-suggest-recipes" ${state.selected.size === 0 ? "disabled" : ""}>레시피 추천받기 →</button>
       </div>
     </div>
   `;
@@ -370,20 +395,16 @@ function renderRecipes() {
   const isFav = state.favorites.has(currentRecipe.id);
 
   const dislikeText = state.showingAlternatives
-    ? '원래 요리 추천 보기 🔙'
-    : '마음에 드는게 없어요 😢';
+    ? '원래 요리 추천 보기'
+    : '마음에 드는게 없어요';
 
   const titleText = state.showingAlternatives
-    ? '🏪 자취생 전설 비책'
-    : '🍳 맞춤 추천 요리';
+    ? "편의점 꿀조합"
+    : "맞춤 추천 요리";
 
   const subtitleText = state.showingAlternatives
     ? '냉장고에 재료가 부족할 땐 편의점 꿀조합 레시피는 어때요?'
-    : '가지고 있는 재료로 만들 수 있는 추천 요리 카드입니다!';
-
-  const sortText = state.showingAlternatives
-    ? '(가장 인기 있는 대학가 편의점 조합 순서입니다)'
-    : '(가장 많이 매칭된 순서대로 정렬되었어요)';
+    : '가지고 있는 재료로 만들 수 있는 추천 요리입니다!';
 
   // Render dots indicators
   const dotsHtml = recipes.map((_, idx) => `
@@ -410,7 +431,6 @@ function renderRecipes() {
       <div class="fridge-header">
         <h2 class="fridge-title">${titleText}</h2>
         <p class="fridge-subtitle">${subtitleText}</p>
-        <p style="font-size:12px; color:var(--color-orange); font-weight:800; margin-top:2px;">${sortText}</p>
       </div>
       
       <!-- Slider Carousel -->
@@ -443,7 +463,7 @@ function renderRecipes() {
               
               <div class="recipe-action">
                 <button class="btn btn-primary recipe-detail-btn" id="btn-view-steps" data-rid="${currentRecipe.id}">
-                  ${currentRecipe.id.startsWith('alt') ? '장바구니 영수증 보기 🧾' : '레시피 펼쳐보기 📖'}
+                  ${currentRecipe.id.startsWith('alt') ? '영수증 보기' : '레시피 보기'}
                 </button>
               </div>
             </div>
@@ -457,7 +477,7 @@ function renderRecipes() {
         ${dotsHtml}
       </div>
       <p style="font-size: 13px; font-weight: 800; margin-top: 10px; color: var(--color-gray); background-color: var(--color-gray-light); padding: 4px 12px; border-radius: 99px;">
-        📖 ${currentIdx + 1} / ${recipes.length} 요리
+        ${currentIdx + 1} / ${recipes.length}
       </p>
     </div>
   `;
@@ -499,11 +519,8 @@ function renderDetail(id) {
         <!-- Convenience Store Receipt Card layout -->
         <div class="receipt-paper">
           <div class="receipt-header">
-            <div class="receipt-store-logo">🏪 자취왕의 편의점 조합</div>
-            <div class="receipt-title" style="display:flex; justify-content:space-between; align-items:center;">
-              <span>🧾 장바구니 영수증</span>
-              <button class="btn btn-secondary btn-sm" id="btn-view-shopping" style="padding: 4px 10px !important; font-size:11px !important;">장보기 🛒</button>
-            </div>
+            <div class="receipt-store-logo">편의점 고인물의 꿀팁</div>
+            <div class="receipt-title">장바구니 영수증</div>
             <div class="receipt-date">ISSUED: ${formattedDate}</div>
             <div class="receipt-divider">================================</div>
           </div>
@@ -538,7 +555,7 @@ function renderDetail(id) {
         
         <div class="detail-actions-tray" style="margin-top:20px; display:flex; justify-content:center;">
           <button class="btn btn-primary" id="btn-start-cooking" data-recipe-id="${recipe.id}" style="flex: none; max-width: 280px; width: 100%;">
-            이 조합 조리 시작! 🍳
+            이 조합 조리 시작! 💸
           </button>
         </div>
       </div>
@@ -592,7 +609,7 @@ function renderDetail(id) {
             </ul>
              <div style="font-family: var(--font-hand); font-size:15px; color: var(--color-orange-deep); margin-top: 10px; border-top:1px dashed var(--color-cream-dark); padding-top:6px; display:flex; justify-content:space-between; align-items:center;">
                <span>🚨 <b>냉장고에 없는 재료:</b> ${missingLabel}</span>
-               <button class="btn btn-secondary btn-sm" id="btn-view-shopping" style="padding: 4px 10px !important; font-size:12px !important; margin-left:10px;">장보기 🛒</button>
+               <button class="btn btn-secondary btn-sm" id="btn-view-shopping" style="padding: 4px 10px !important; font-size:12px !important; margin-left:10px;">장바구니</button>
              </div>
           </div>
           
@@ -610,7 +627,7 @@ function renderDetail(id) {
             <button class="btn btn-outline" id="btn-detail-fav-toggle" data-recipe-id="${recipe.id}">
               ${isFav ? '❤️ 즐겨찾기 해제' : '🤍 즐겨찾기 저장'}
             </button>
-            <button class="btn btn-primary" id="btn-start-cooking" data-recipe-id="${recipe.id}">요리 시작하기 🍳</button>
+            <button class="btn btn-primary" id="btn-start-cooking" data-recipe-id="${recipe.id}">요리 시작하기</button>
           </div>
         </div>
         
@@ -640,7 +657,7 @@ function renderCooking(id) {
           <span class="cooking-bubble-particle" style="--x-offset: 50px; animation-duration: 1.5s; animation-delay: 1.2s;">${seq[3] || '✨'}</span>
         </div>
         <h2 class="cooking-title">${name} 만드는 중...</h2>
-        <p class="cooking-desc">${name}을(를) 맛있게 조리하고 있어요.<br/>더 맛있게 변하는 중이랍니다! 잠시만 기다려주세요 😋</p>
+        <p class="cooking-desc">${name}을(를) 맛있게 조리하고 있어요 😋</p>
         
         <div class="cooking-progress-bar">
           <div class="cooking-progress-fill"></div>
@@ -652,23 +669,37 @@ function renderCooking(id) {
 
 // Timer management to fill progress bar and auto navigate
 export function startCookingFlow(recipeId) {
+  clearCookingFlowTimers();
   let progress = 0;
   const fillElement = document.querySelector('.cooking-progress-fill');
 
-  const interval = setInterval(() => {
+  cookingIntervalId = setInterval(() => {
     progress += 4;
     if (fillElement) {
       fillElement.style.width = `${Math.min(progress, 100)}%`;
     }
 
     if (progress >= 100) {
-      clearInterval(interval);
+      clearInterval(cookingIntervalId);
+      cookingIntervalId = null;
       // Wait another 300ms for graphical polish, then push to completed
-      setTimeout(() => {
+      cookingTimeoutId = setTimeout(() => {
+        cookingTimeoutId = null;
         navigate('completed', recipeId);
       }, 350);
     }
   }, 100);
+}
+
+function clearCookingFlowTimers() {
+  if (cookingIntervalId !== null) {
+    clearInterval(cookingIntervalId);
+    cookingIntervalId = null;
+  }
+  if (cookingTimeoutId !== null) {
+    clearTimeout(cookingTimeoutId);
+    cookingTimeoutId = null;
+  }
 }
 
 /* ==================== 6. COMPLETED SCREEN RENDER ==================== */
@@ -707,12 +738,12 @@ function renderCompleted(id) {
         <h2 class="completed-title">맛있게 완성했어요! 🎉</h2>
         <div class="completed-dish-name">🤤 ${recipe.name}</div>
         
-        <p class="completed-ingredients-label">🍳 요리에 들어간 소중한 재료들</p>
+        <p class="completed-ingredients-label">🍳 요리에 들어간 재료들</p>
         <div class="completed-ingredients-list">
           ${usedHtml}
         </div>
         
-        <button class="btn btn-primary completed-action-btn" id="btn-go-rating" data-recipe-id="${recipe.id}">냠냠 시식하고 별점 남기기 🍽️</button>
+        <button class="btn btn-primary completed-action-btn" id="btn-go-rating" data-recipe-id="${recipe.id}">후기 남기기</button>
       </div>
     </div>
   `;
@@ -758,7 +789,7 @@ function renderMyPage() {
           </div>
         `;
     }).join('')
-    : `<div class="book-empty-text" style="grid-column: 1/-1; text-align:center; padding: 20px; font-family: var(--font-hand); color: var(--color-gray);">아직 찜한 요리가 없어요. 레시피 상세 카드에서 하트(🤍)를 눌러 찜해보세요!</div>`;
+    : `<div class="book-empty-text" style="grid-column: 1/-1; text-align:center; padding: 20px; font-family: var(--font-hand); color: var(--color-gray);">아직 찜한 요리가 없어요. 레시피 상세 카드에서 하트를 눌러 찜해보세요!</div>`;
 
   // Collection 필터링 처리 (전체 / 쉬움 / 보통 / 어려움)
   const filterVal = state.mypageDifficultyFilter;
@@ -780,7 +811,7 @@ function renderMyPage() {
           <span class="book-badge ${badgeClass}">${typeLabel}</span>
           <div class="book-card-emoji">${r.emoji}</div>
           <div class="book-card-name">${r.name}</div>
-          <div class="book-card-count">🍳 ${count}회 조리</div>
+          <div class="book-card-count">${count}회 조리</div>
         </div>
       `;
     } else {
@@ -808,11 +839,11 @@ function renderMyPage() {
     <div class="mypage-container" style="display: flex; flex-direction: column; gap: 35px; width: 100%;">
       <div class="fridge-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 15px;">
         <div>
-          <h2 class="fridge-title">👤 마이페이지</h2>
-          <p class="fridge-subtitle">내 찜 레시피와 요리 도감을 관리해요!</p>
+          <h2 class="fridge-title">마이페이지</h2>
+          <p class="fridge-subtitle">찜 레시피와 요리 도감을 관리해요!</p>
         </div>
         <button class="btn btn-secondary btn-sm" id="btn-open-shopping" style="padding: 8px 16px !important; font-size: 14px !important; display: flex; align-items: center; gap: 6px;">
-          🛒 장바구니 리스트
+          장바구니
         </button>
       </div>
 
@@ -826,7 +857,7 @@ function renderMyPage() {
 
       <!-- 2. 요리 도감 섹션 -->
       <div class="mypage-section" style="background-color: var(--color-white); border: var(--border-thick); border-radius: var(--br-lg); padding: 25px 20px; box-shadow: 0 6px 0 var(--color-shadow);">
-        <h3 class="book-section-title" style="margin-top:0; border-bottom: 2px dashed var(--color-cream-dark); padding-bottom: 8px;">📖 자취생 요리 도감</h3>
+        <h3 class="book-section-title" style="margin-top:0; border-bottom: 2px dashed var(--color-cream-dark); padding-bottom: 8px;">📖 요리 도감</h3>
         
         <div class="book-progress-wrapper" style="margin: 15px 0 20px 0; background: var(--color-cream-light); border: var(--border-thin); border-radius: var(--br-sm); padding: 15px;">
           <div class="book-progress-text" style="display:flex; justify-content:space-between; font-weight:800; font-size:14px; margin-bottom:8px;">
@@ -840,10 +871,10 @@ function renderMyPage() {
 
         <!-- 난이도 필터 메뉴 칩 버튼 그룹 -->
         <div class="difficulty-filter-container" style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; font-family: var(--font-main);">
-          <button class="chip-btn ${state.mypageDifficultyFilter === 'all' ? 'active' : ''}" data-diff="all" style="font-size:12px; padding: 5px 14px;">전체</button>
-          <button class="chip-btn ${state.mypageDifficultyFilter === '쉬움' ? 'active' : ''}" data-diff="쉬움" style="font-size:12px; padding: 5px 14px;">🟢 쉬움</button>
-          <button class="chip-btn ${state.mypageDifficultyFilter === '보통' ? 'active' : ''}" data-diff="보통" style="font-size:12px; padding: 5px 14px;">🟡 보통</button>
-          <button class="chip-btn ${state.mypageDifficultyFilter === '어려움' ? 'active' : ''}" data-diff="어려움" style="font-size:12px; padding: 5px 14px;">🔴 어려움</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === "all" ? "active" : ""}" data-diff="all" style="font-size:12px; padding: 5px 14px;">전체</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === "쉬움" ? "active" : ""}" data-diff="쉬움" style="font-size:12px; padding: 5px 14px;">🟢 쉬움</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === "보통" ? "active" : ""}" data-diff="보통" style="font-size:12px; padding: 5px 14px;">🟡 보통</button>
+          <button class="chip-btn ${state.mypageDifficultyFilter === "어려움" ? "active" : ""}" data-diff="어려움" style="font-size:12px; padding: 5px 14px;">🔴 어려움</button>
         </div>
 
         <div class="book-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px;">
@@ -860,19 +891,13 @@ function renderRating(id) {
   if (!recipe) recipe = ALTERNATIVE_RECIPES.find(r => r.id === id);
   const dishName = recipe ? recipe.name : '이 요리';
 
-  let feedbackHtml = '';
-  if (state.ratingFeedback) {
-    feedbackHtml = `
-      <div class="feedback-thankyou-box">
-        다음 추천에 꼭 반영할게요!
-      </div>
-    `;
-  }
-
   return `
     <div class="rating-container">
       <div class="dialogue-section">
-        <div class="mascot-avatar">👩‍🍳</div>
+        <!-- 멘붕 탄 토끼로 뽀짝하게 대체 -->
+        <div class="rating-mascot-wrap">
+          <img src="burned.png" class="rating-mascot-img" alt="멘붕 토끼" />
+        </div>
         <div class="speech-bubble">
           <div class="speech-bubble-text">
             방금 드신 <b>${dishName}</b>,<br/>
@@ -898,11 +923,9 @@ function renderRating(id) {
         </button>
       </div>
       
-      ${feedbackHtml}
-      
       <div class="rating-action-shelf">
-        <button class="btn btn-outline" id="btn-rate-book" data-nav="mypage">📖 요리 도감</button>
-        <button class="btn btn-primary" id="btn-rate-home" data-nav="home">🏠 홈으로</button>
+        <button class="btn btn-secondary" id="btn-rate-book" data-nav="mypage">요리 도감</button>
+        <button class="btn btn-primary" id="btn-rate-home" data-nav="home">홈으로</button>
       </div>
     </div>
   `;
@@ -912,11 +935,6 @@ function renderRating(id) {
 document.addEventListener('DOMContentLoaded', () => {
   navigate('home');
 });
-
-// Run initial boot if DOM already loaded
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  navigate('home');
-}
 
 /* ==================== ALTERNATIVE RECIPE SUGGESTION MODAL ==================== */
 export function showDislikeModal() {
@@ -933,7 +951,7 @@ export function showDislikeModal() {
       <button class="modal-close" onclick="document.getElementById('dislike-modal').classList.remove('show')">✖</button>
       <div class="modal-emoji">🏪🍜🍙</div>
       <h3 class="modal-title">냉장고에 먹을 게 없나요?</h3>
-      <p class="modal-subtitle">그렇다면 자취생들의 전설 신전! 편의점 꿀조합을 추천해 드려요! ✨</p>
+      <p class="modal-subtitle">그렇다면 자취생들의 전설 신전! 편의점 꿀조합을 추천해 드려요!</p>
       
       <div class="modal-combos">
         <div class="combo-item">

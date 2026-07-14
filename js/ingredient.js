@@ -61,6 +61,20 @@ export function initIngredient() {
       document.querySelector('.interactive-fridge')?.classList.remove('fridge-open');
       showToast('냉장고 문을 닫았어요.');
     }
+
+    // 이스터에그: 배고픈 토끼 클릭 시 말풍선 피어오르고 2.8초 뒤 스르륵 소멸
+    const hungryBunny = event.target.closest('.fridge-hungry-bunny');
+    if (hungryBunny) {
+      const bubble = document.querySelector('.hungry-bubble');
+      if (bubble) {
+        bubble.classList.add('show-bubble');
+        clearTimeout(window._bunnyBubbleTimer);
+        window._bunnyBubbleTimer = setTimeout(() => {
+          bubble.classList.remove('show-bubble');
+        }, 1800);
+      }
+      return;
+    }
   });
 
   document.addEventListener('input', (event) => {
@@ -81,4 +95,3 @@ function updateFooter() {
     button.disabled = count === 0;
   });
 }
-
