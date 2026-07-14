@@ -213,11 +213,7 @@ export const RECIPES = csvRows.map((row, index) => {
       .match(/["']([^"']+)["']/g)
       ?.map((item) => item.slice(1, -1)) ||
     [];
-<<<<<<< HEAD
-  
-=======
 
->>>>>>> 6aa932c (Fix: 레시피 상세 카드에서 복귀 시 메뉴판 뷰(menu) 복원 고정)
   // 형묵이의 제안을 수용하여 substituteTips 필드를 동적으로 맵핑 (없을 시 빈 배열)
   const substituteTips = recipeSubstituteTips[row.name] || [];
 

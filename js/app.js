@@ -168,18 +168,26 @@ document.addEventListener('click', (e) => {
     showCreditsModal();
   }
 
-  // ◀, ▶ 버튼 및 페이지네이션 도트 클릭 시 넘김 방향 감지하여 캐시 기록
+  // ◀, ▶ 버튼 및 페이지네이션 도트 클릭 시 넘김 방향 감지, 인덱스 롤링 및 렌더 동기식 수행!
   const prevBtn = e.target.closest('#btn-carousel-prev');
   const nextBtn = e.target.closest('#btn-carousel-next');
   const dotBtn = e.target.closest('.carousel-dot');
 
-  if (prevBtn) {
-    state.carouselDirection = 'left';
-  } else if (nextBtn) {
-    state.carouselDirection = 'right';
+  if (prevBtn || nextBtn) {
+    const length = state.carouselRecipes.length;
+    if (length > 0) {
+      state.carouselDirection = prevBtn ? 'left' : 'right';
+      const offset = prevBtn ? -1 : 1;
+      state.currentCarouselIndex = (state.currentCarouselIndex + offset + length) % length;
+      render();
+    }
   } else if (dotBtn) {
     const targetIdx = parseInt(dotBtn.dataset.index, 10);
-    state.carouselDirection = targetIdx > state.currentCarouselIndex ? 'right' : 'left';
+    if (!isNaN(targetIdx)) {
+      state.carouselDirection = targetIdx > state.currentCarouselIndex ? 'right' : 'left';
+      state.currentCarouselIndex = targetIdx;
+      render();
+    }
   } else {
     // 일반 라우팅이나 다른 클릭 시에는 초기화
     state.carouselDirection = null;
