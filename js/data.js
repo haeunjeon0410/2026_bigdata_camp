@@ -335,6 +335,33 @@ export const INGREDIENTS = ingredientNames.map((name, index) => ({
   storage: ingredientStorage(name),
 }));
 
+// 영수증에서 처음 발견한 재료도 냉장고에 표시할 수 있도록 런타임에 등록합니다.
+export function registerIngredient(name) {
+  const cleanName = String(name || "").trim().slice(0, 40);
+  if (!cleanName) return null;
+
+  const existing = INGREDIENTS.find(
+    (ingredient) => ingredient.name.toLowerCase() === cleanName.toLowerCase(),
+  );
+  if (existing) return existing;
+
+  const id = `receipt-${Date.now()}-${INGREDIENTS.length}`;
+  const dairyPattern = /우유|치즈|요거트|요구르트|버터|크림/i;
+  const meatPattern = /고기|돼지|소고기|닭|오리|햄|소시지|베이컨|참치|연어|새우/i;
+  const grainPattern = /빵|면|파스타|쌀|밥|시리얼|떡/i;
+  const category = dairyPattern.test(cleanName)
+    ? "dairy"
+    : meatPattern.test(cleanName)
+      ? "meat"
+      : grainPattern.test(cleanName)
+        ? "grain"
+        : "vegetable";
+
+  const ingredient = { id, name: cleanName, emoji: "🥕", category };
+  INGREDIENTS.push(ingredient);
+  return ingredient;
+}
+
 export const CATEGORIES = {
   all: { name: "전체", emoji: "✨" },
   dairy: { name: "유제품·달걀", emoji: "🥚" },

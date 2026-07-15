@@ -84,3 +84,35 @@ export async function toggleFavoriteInSupabase(recipeId, isAdding) {
     console.error('❌ [Supabase] 즐겨찾기 동기화 실패:', err.message);
   }
 }
+
+/**
+ * 영수증 이미지를 analyze-receipt Edge Function에 전송해 식재료 항목을 분석합니다.
+ * @param {File} imageFile - 사용자가 업로드한 영수증 이미지 파일
+ * @returns {Promise<{items: Array<{rawName: string, normalizedName: string, quantity: string}>}>}
+ */
+export async function analyzeReceipt(imageFile) {
+  if (!supabase) {
+    console.log('⚠️ [Supabase] 연결 정보가 없어 영수증 분석을 수행할 수 없습니다.');
+    return { items: [] };
+  }
+
+  if (!imageFile) {
+    console.error('❌ [Supabase] 영수증 이미지 파일이 전달되지 않았습니다.');
+    return { items: [] };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('receipt', imageFile);
+
+    const { data, error } = await supabase.functions.invoke('analyze-receipt', {
+      body: formData,
+    });
+
+    if (error) throw error;
+    return { items: data?.items ?? [], isDemo: false };
+  } catch (err) {
+    console.error('❌ [Supabase] 영수증 분석 실패:', err.message);
+    throw err;
+  }
+}
