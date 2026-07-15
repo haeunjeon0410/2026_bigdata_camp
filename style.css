@@ -963,6 +963,129 @@ h4 {
   opacity: 1 !important;
 }
 
+/* Dynamically rendered ingredient search/category results */
+.ingredient-search-results {
+  width: min(100%, 720px);
+  margin: 18px auto 0;
+  padding: 16px;
+  border: var(--border-thin);
+  border-radius: var(--br-md);
+  background: var(--color-cream-light);
+  box-shadow: 3px 3px 0 var(--color-charcoal);
+}
+
+.ingredient-search-results:empty {
+  display: none;
+}
+
+.ingredient-search-results .search-results-title,
+.ingredient-search-results .category-results-title {
+  margin-bottom: 10px;
+  color: var(--color-charcoal);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.ingredient-candidate-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+/* Search results are outside .interactive-fridge, so share its sticker styling. */
+.ingredient-search-results .ingredient-sticker {
+  position: relative;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: var(--br-sm);
+  background: var(--color-white);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  color: var(--color-charcoal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transform: rotate(var(--tilt, 0deg));
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+}
+
+.ingredient-search-results .ingredient-sticker:hover {
+  background: var(--color-mint-light);
+  transform: scale(1.06) rotate(0deg);
+}
+
+.ingredient-search-results .ingredient-sticker.selected {
+  background: #E8F8F2;
+  border-color: var(--color-mint);
+  box-shadow: 2px 2px 0 var(--color-mint-deep);
+}
+
+.ingredient-search-results .sticker-emoji {
+  font-size: 15px;
+}
+
+.ingredient-search-results .sticker-name {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ingredient-search-results .sticker-chk {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: 50%;
+  background: var(--color-orange);
+  color: var(--color-white);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  font-weight: 800;
+  box-shadow: 1px 1px 0 var(--color-charcoal);
+}
+
+.custom-ingredient-add,
+.custom-ingredient-delete {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.custom-ingredient-add {
+  background: var(--color-orange);
+  color: var(--color-white);
+  box-shadow: 2px 2px 0 var(--color-orange-deep);
+}
+
+.custom-ingredient-delete {
+  background: var(--color-orange-light);
+  color: var(--color-orange-deep);
+  box-shadow: 1.5px 1.5px 0 var(--color-charcoal);
+}
+
+.custom-ingredient-add:hover,
+.custom-ingredient-delete:hover {
+  transform: translateY(-1px);
+}
+
+.ingredient-search-results .empty-message {
+  padding: 8px;
+  color: var(--color-gray);
+  font-size: 13px;
+  text-align: center;
+}
+
 /* Compact bottom actions bar for My Fridge */
 .fridge-bottom-actions {
   display: flex;
