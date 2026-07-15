@@ -357,7 +357,19 @@ export function registerIngredient(name) {
         ? "grain"
         : "vegetable";
 
-  const ingredient = { id, name: cleanName, emoji: "🥕", category };
+  const storage =
+    category === "dairy"
+      ? "shelf-1"
+      : category === "meat" || category === "grain"
+        ? "shelf-2"
+        : "drawer";
+  const ingredient = {
+    id,
+    name: cleanName,
+    emoji: ingredientEmoji[cleanName] || "🥕",
+    category,
+    storage,
+  };
   INGREDIENTS.push(ingredient);
   return ingredient;
 }
