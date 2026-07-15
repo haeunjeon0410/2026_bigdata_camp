@@ -327,6 +327,7 @@ document.addEventListener("click", (e) => {
       const offset = prevBtn ? -1 : 1;
       state.currentCarouselIndex =
         (state.currentCarouselIndex + offset + length) % length;
+      state.preserveRecipeResults = true;
       render();
     }
   } else if (dotBtn) {
@@ -335,6 +336,7 @@ document.addEventListener("click", (e) => {
       state.carouselDirection =
         targetIdx > state.currentCarouselIndex ? "right" : "left";
       state.currentCarouselIndex = targetIdx;
+      state.preserveRecipeResults = true;
       render();
     }
   } else {

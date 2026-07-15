@@ -37,7 +37,12 @@ const cuisineOverrides = {
   볶음우동: '일식',
   햄야채볶음: '한식',
   계란국: '한식',
-  덮밥: '한식'
+  덮밥: '한식',
+  돼지고기덮밥: '한식',
+  '돼지고기 덮밥': '한식',
+  짜장면: '중식',
+  짬뽕: '중식',
+  탕수육: '중식'
 };
 
 const seasoningTips = {
@@ -125,7 +130,10 @@ const RECIPE_DETAIL_INFO = {
 };
 
 function getCanonicalRecipeName(recipe) {
-  return String(recipe?.name || '').trim() === '돼지고기덮밥' ? '덮밥' : String(recipe?.name || '').trim();
+  const recipeName = String(recipe?.name || '').trim();
+  return ['덮밥', '돼지고기덮밥', '돼지고기 덮밥'].includes(recipeName)
+    ? '덮밥'
+    : recipeName;
 }
 
 function getExtraIngredientTip(recipe) {
@@ -145,11 +153,14 @@ function getSeasoningTip(recipe) {
 }
 
 function getRecipeName(recipe) {
-  return getCanonicalRecipeName(recipe) === '덮밥' ? '돼지고기덮밥' : recipe?.name;
+  return getCanonicalRecipeName(recipe) === '덮밥'
+    ? '돼지고기 덮밥'
+    : recipe?.name;
 }
 
 function classifyCuisine(recipe) {
   const recipeName = String(recipe?.name || '').trim();
+  if (recipe?.cuisineType) return recipe.cuisineType;
   if (cuisineOverrides[recipeName]) return cuisineOverrides[recipeName];
   if (String(recipe?.id || '').startsWith('alt')) return '편의점';
   const text = [recipe.name, recipe.category, ...(recipe.ingredients || [])].join(' ');
@@ -224,6 +235,14 @@ export function applyRecipeFilters() {
       preferenceScore
     };
   });
+
+  if (state.showingAlternatives) {
+    state.carouselRecipes = recipes.sort(
+      (a, b) => b.rate - a.rate || getMinutes(a) - getMinutes(b),
+    );
+    state.currentCarouselIndex = 0;
+    return;
+  }
 
   const availableRecipes = recipes.filter((recipe) =>
     activeDifficultyFilter === 'all' || recipe.difficulty === activeDifficultyFilter
@@ -471,10 +490,31 @@ export function decorateDetailPage() {
 
 }
 
+function resetRecommendationFiltersForMenu() {
+  selectedPreferences.clear();
+  selectedCuisines.clear();
+  recipeSearchQuery = '';
+  activeDifficultyFilter = 'all';
+  recipePage = 1;
+  state.showingAlternatives = false;
+  state.recipeSource = 'all';
+  document.querySelectorAll('#taste-modal .chip-btn.active').forEach((chip) => {
+    chip.classList.remove('active');
+    chip.setAttribute('aria-pressed', 'false');
+  });
+}
+
 export function initRecommend() {
   addCuisineChoices();
 
   document.addEventListener('click', (event) => {
+    const recipesNavigation = event.target.closest('[data-nav="recipes"]');
+    if (recipesNavigation) {
+      resetRecommendationFiltersForMenu();
+      refreshRecipeResults();
+      return;
+    }
+
     const resetRecipeFilters = event.target.closest('#btn-reset-recipe-filters');
     if (resetRecipeFilters) {
       selectedPreferences.clear();
