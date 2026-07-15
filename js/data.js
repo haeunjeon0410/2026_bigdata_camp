@@ -23,7 +23,10 @@ const RAW_RECIPES = `name,category,ingredients,cook_time,difficulty,steps,emoji,
 계란말이,반찬·간편식,"계란, 당근, 대파, 소금",15,쉬움,1. 계란을 풀고 다진 채소와 소금을 섞는다. | 2. 팬에 얇게 부어 돌돌 말아준다. | 3. 이 과정을 반복해 층을 쌓는다. | 4. 한 김 식힌 뒤 썰어 완성한다.,🍳,돌돌 말아 구워낸 노란 계란말이는 푹신하고 부드러워 어떤 상차림에도 잘 어울리는 국민 반찬입니다.,"['🥚', '🧅', '🍳', '🍽️']"
 감자볶음,반찬·간편식,"감자, 당근, 양파, 식용유, 소금",15,쉬움,1. 감자와 당근을 채썬다. | 2. 팬에 기름을 두르고 감자를 먼저 볶는다. | 3. 당근과 양파를 넣고 함께 볶는다. | 4. 소금으로 간을 맞춰 완성한다.,🥔,얇게 썬 감자를 고소한 기름에 볶아내어 아삭함과 쫀득함을 동시에 느낄 수 있는 담백한 반찬입니다.,"['🥔', '🧅', '🍳', '🍽️']"
 토스트,반찬·간편식,"식빵, 계란, 설탕, 식용유",10,쉬움,1. 계란과 채소를 섞어 계란물을 만든다. | 2. 팬에 계란물을 부쳐 얇게 만든다. | 3. 식빵 사이에 끼운다. | 4. 취향에 따라 설탕을 뿌려 완성한다.,🥪,버터에 노릇하게 구운 식빵에 계란과 잼을 곁들여 바쁜 아침 시간에 기분 좋은 에너지를 충전하세요.,"['🍞', '🍳', '🧈', '🥪']"
-샌드위치,반찬·간편식,"식빵, 계란, 양배추, 마요네즈",15,쉬움,1. 계란을 삶아 으깬 뒤 마요네즈와 섞는다. | 2. 양배추를 채썰어 준비한다. | 3. 식빵에 계란 샐러드와 양배추를 올린다. | 4. 다른 식빵으로 덮어 완성한다.,🥪,신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.,"['🍞', '🥩', '🥬', '🥪']"`;
+샌드위치,반찬·간편식,"식빵, 계란, 양배추, 마요네즈",15,쉬움,1. 계란을 삶아 으깬 뒤 마요네즈와 섞는다. | 2. 양배추를 채썰어 준비한다. | 3. 식빵에 계란 샐러드와 양배추를 올린다. | 4. 다른 식빵으로 덮어 완성한다.,🥪,신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.,"['🍞', '🥩', '🥬', '🥪']"
+짜장면,면류,"국수, 돼지고기, 양파, 춘장, 전분가루, 식용유",25,보통,1. 돼지고기와 양파를 깍둑썰기 해 식용유에 볶는다. | 2. 춘장을 넣고 기름에 충분히 볶아 향을 낸다. | 3. 물을 넣고 끓인 뒤 전분가루 푼 물로 농도를 맞춘다. | 4. 삶은 면 위에 소스를 부어 완성한다.,🍜,달콤짭짤한 춘장 소스를 볶아 만든 짜장면은 중국집 맛을 그대로 재현한 든든한 별미예요.,"['🧅', '🍳', '🍜', '😋']"
+짬뽕,면류,"국수, 돼지고기, 양파, 양배추, 고춧가루, 대파",30,어려움,1. 돼지고기와 대파를 기름에 볶아 향을 낸다. | 2. 양파와 양배추를 넣고 센 불에 볶는다. | 3. 고춧가루와 물을 넣어 얼큰하게 끓인다. | 4. 삶은 면을 국물에 말아 완성한다.,🍲,얼큰하고 시원한 국물에 아삭한 채소가 듬뿍 들어가 얼큰함이 당길 때 딱인 중식 별미입니다.,"['🌶️', '🥬', '🍲', '🔥']"
+탕수육,메인요리,"돼지고기, 전분가루, 당근, 오이, 식초, 설탕, 간장",35,어려움,1. 돼지고기에 전분가루를 고루 묻혀 바삭하게 튀긴다. | 2. 당근과 오이를 얇게 채썬다. | 3. 식초, 설탕, 간장을 끓여 새콤달콤한 소스를 만든다. | 4. 튀긴 고기와 채소에 소스를 부어 완성한다.,🍖,겉은 바삭하고 속은 촉촉한 고기에 새콤달콤한 소스를 곁들여 남녀노소 누구나 좋아하는 인기 중식 메뉴예요.,"['🥩', '🍳', '🍯', '😋']"`;
 
 function parseCsvLine(line) {
   const fields = [];
@@ -51,11 +54,7 @@ const csvRows = csvLines.slice(1).map((line) => {
 });
 
 const ingredientNames = [
-  ...new Set([
-    ...csvRows.flatMap((row) => row.ingredients.split(", ")),
-    "치즈",
-    "베이컨",
-  ]),
+  ...new Set(csvRows.flatMap((row) => row.ingredients.split(", "))),
 ];
 const ingredientEmoji = {
   계란: "🥚",
@@ -98,6 +97,8 @@ const ingredientEmoji = {
   소고기: "🥩",
   참기름: "🫙",
   마요네즈: "🥫",
+  춘장: "🫙",
+  전분가루: "🌾",
 };
 const ingredientCategory = (name) => {
   if (["계란", "두부", "순두부", "마요네즈"].includes(name)) return "dairy";
@@ -128,6 +129,34 @@ const rowFixes = {
 
 // 대체 재료 팁 (형묵 신규 기능과 세트, data 필드 규격은 채린-형묵 협의로 확정)
 // 일반 레시피용 대체 재료 매핑 데이터 (recipes_with_substitutes.csv 기준, 23개 전체 반영)
+// 요리 종류(한식/양식/일식/중식) 분류 — 지호 담당 카테고리 필터 신규 구현 시 사용 예정
+// 참고: 중식으로 분류된 레시피가 현재 0개입니다. 중식 필터 구현 시 항상 빈 결과가 나올 수 있어요.
+const cuisineTypeMap = {
+  감자전: "한식",
+  볶음밥: "한식",
+  오므라이스: "일식",
+  덮밥: "일식",
+  카레라이스: "일식",
+  비빔면: "한식",
+  "알리오 올리오": "양식",
+  토마토파스타: "양식",
+  볶음우동: "일식",
+  우동: "일식",
+  잔치국수: "한식",
+  비빔국수: "한식",
+  김치찌개: "한식",
+  된장찌개: "한식",
+  순두부찌개: "한식",
+  부대찌개: "한식",
+  미역국: "한식",
+  계란국: "한식",
+  햄야채볶음: "한식",
+  계란말이: "한식",
+  감자볶음: "한식",
+  토스트: "양식",
+  샌드위치: "양식",
+};
+
 const substituteTipsMap = {
   "감자전": [
     { original: "부침가루", alternatives: ["밀가루", "전분가루"], note: "전분가루를 쓰면 더 쫄깃해져요." },
@@ -198,6 +227,15 @@ const substituteTipsMap = {
   "샌드위치": [
     { original: "마요네즈", alternatives: ["머스타드", "허니머스타드"], note: "머스타드를 섞으면 더 상큼한 맛이 납니다." },
   ],
+  "짜장면": [
+    { original: "춘장", alternatives: ["시판 짜장소스"], note: "춘장이 없으면 시판 짜장소스로 간단히 대체할 수 있어요." },
+  ],
+  "짬뽕": [
+    { original: "돼지고기", alternatives: ["오징어", "홍합"], note: "해물을 넣으면 더 시원한 국물 맛이 납니다." },
+  ],
+  "탕수육": [
+    { original: "전분가루", alternatives: ["튀김가루"], note: "튀김가루를 쓰면 더 바삭한 튀김옷이 나옵니다." },
+  ],
 };
 
 export const INGREDIENTS = ingredientNames.map((name, index) => ({
@@ -246,11 +284,9 @@ export const RECIPES = csvRows.map((row, index) => {
     steps,
     cookingSequence,
     substituteTips: substituteTipsMap[row.name] || [],
+    cuisineType: cuisineTypeMap[row.name] || "",
   };
 });
-
-const getIngredientId = (name) =>
-  INGREDIENTS.find((ingredient) => ingredient.name === name)?.id;
 
 export const ALTERNATIVE_RECIPES = [
   {
@@ -259,7 +295,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍝",
     difficulty: "쉬움",
     time: "10분",
-    need: [getIngredientId("치즈")],
+    need: ["cheese"],
     missing: ["자이언트 떡볶이", "콕콕콕 스파게티", "프랑크 소시지"],
     aiReason:
       "편의점 마니아라면 모를 수 없는 그 레시피! 극락의 단짠 조합입니다.",
@@ -291,7 +327,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍙",
     difficulty: "쉬움",
     time: "5분",
-    need: [getIngredientId("치즈"), getIngredientId("밥")],
+    need: ["cheese", "rice"],
     missing: ["불닭볶음면", "참치마요 삼각김밥"],
     aiReason: "매콤한 맛과 고소한 참치마요 삼김이 만나 완벽한 한 끼가 됩니다!",
     ingredients: [
@@ -320,7 +356,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍜",
     difficulty: "쉬움",
     time: "8분",
-    need: [getIngredientId("계란"), getIngredientId("대파")],
+    need: ["egg", "greenonion"],
     missing: ["라면 1봉지", "쌈장 반스푼"],
     aiReason:
       "집에 쌈장이 남으셨나요? 고깃집에서 먹던 깊은 구수의 극치 라면 맛이 납니다.",
@@ -350,7 +386,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍲",
     difficulty: "쉬움",
     time: "10분",
-    need: [getIngredientId("치즈")],
+    need: ["cheese"],
     missing: ["신라면 1봉지", "짜파게티 1봉지"],
     aiReason:
       "기생충에 소개된 짜파구리에 고소한 치즈를 더해 더 걸쭉하고 맛있게 즐겨봐요.",
@@ -376,7 +412,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🥔",
     difficulty: "쉬움",
     time: "12분",
-    need: [getIngredientId("치즈"), getIngredientId("베이컨")],
+    need: ["cheese", "bacon"],
     missing: ["허니버터칩 1봉지"],
     aiReason:
       "감자 가는 게 귀찮을 때! 허니버터 감자칩으로 순식간에 달콤 바삭한 감자전을 만들어요.",
@@ -406,7 +442,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍞",
     difficulty: "쉬움",
     time: "7분",
-    need: [getIngredientId("식빵"), getIngredientId("계란"), getIngredientId("치즈")],
+    need: ["bread", "egg", "cheese"],
     missing: ["종이컵"],
     aiReason:
       "핫케이크 가루 없이 식빵 한 장과 전자레인지만으로 계란빵의 맛을 완벽 재현합니다.",
