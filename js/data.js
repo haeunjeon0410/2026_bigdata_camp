@@ -54,7 +54,11 @@ const csvRows = csvLines.slice(1).map((line) => {
 });
 
 const ingredientNames = [
-  ...new Set(csvRows.flatMap((row) => row.ingredients.split(", "))),
+  ...new Set([
+    ...csvRows.flatMap((row) => row.ingredients.split(", ")),
+    "치즈",
+    "베이컨",
+  ]),
 ];
 const ingredientEmoji = {
   계란: "🥚",
@@ -99,13 +103,67 @@ const ingredientEmoji = {
   마요네즈: "🥫",
   춘장: "🫙",
   전분가루: "🌾",
+  치즈: "🧀",
+  베이컨: "🥓",
+};
+// P0 버그 수정: 분류 안 된 재료가 전부 vegetable로 떨어지던 문제 → 전체 재료를 명시적으로 매핑
+const ingredientCategoryMap = {
+  // 유제품·달걀
+  계란: "dairy",
+  두부: "dairy",
+  순두부: "dairy",
+  마요네즈: "dairy",
+  치즈: "dairy",
+  // 고기·가공품 (육류 + 조미료/소스/가공식품 전부 여기로 분류)
+  돼지고기: "meat",
+  소고기: "meat",
+  소시지: "meat",
+  스팸: "meat",
+  베이컨: "meat",
+  간장: "meat",
+  굴소스: "meat",
+  케첩: "meat",
+  카레가루: "meat",
+  고추장: "meat",
+  고춧가루: "meat",
+  다시다: "meat",
+  참기름: "meat",
+  올리브유: "meat",
+  토마토소스: "meat",
+  식초: "meat",
+  설탕: "meat",
+  소금: "meat",
+  후추: "meat",
+  식용유: "meat",
+  부침가루: "meat",
+  전분가루: "meat",
+  춘장: "meat",
+  된장: "meat",
+  // 곡류·식사
+  밥: "grain",
+  국수: "grain",
+  스파게티면: "grain",
+  우동면: "grain",
+  식빵: "grain",
+  // 채소·과일
+  감자: "vegetable",
+  당근: "vegetable",
+  대파: "vegetable",
+  마늘: "vegetable",
+  양배추: "vegetable",
+  양파: "vegetable",
+  오이: "vegetable",
+  애호박: "vegetable",
+  김치: "vegetable",
+  미역: "vegetable",
 };
 const ingredientCategory = (name) => {
-  if (["계란", "두부", "순두부", "마요네즈"].includes(name)) return "dairy";
-  if (["돼지고기", "소고기", "소시지", "스팸"].includes(name)) return "meat";
-  if (["밥", "국수", "스파게티면", "우동면", "식빵"].includes(name))
-    return "grain";
-  return "vegetable";
+  const category = ingredientCategoryMap[name];
+  if (!category) {
+    console.warn(`⚠️ [data.js] "${name}" 재료는 카테고리 매핑이 없어 vegetable로 처리됩니다. ingredientCategoryMap에 추가해주세요.`);
+    return "vegetable";
+  }
+  return category;
 };
 
 // CSV의 설명문에 포함된 쉼표가 따옴표 처리되지 않은 행을 보정합니다.
@@ -295,7 +353,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍝",
     difficulty: "쉬움",
     time: "10분",
-    need: ["cheese"],
+    need: ["i43"],
     missing: ["자이언트 떡볶이", "콕콕콕 스파게티", "프랑크 소시지"],
     aiReason:
       "편의점 마니아라면 모를 수 없는 그 레시피! 극락의 단짠 조합입니다.",
@@ -327,7 +385,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍙",
     difficulty: "쉬움",
     time: "5분",
-    need: ["cheese", "rice"],
+    need: ["i43", "i05"],
     missing: ["불닭볶음면", "참치마요 삼각김밥"],
     aiReason: "매콤한 맛과 고소한 참치마요 삼김이 만나 완벽한 한 끼가 됩니다!",
     ingredients: [
@@ -356,7 +414,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍜",
     difficulty: "쉬움",
     time: "8분",
-    need: ["egg", "greenonion"],
+    need: ["i02", "i27"],
     missing: ["라면 1봉지", "쌈장 반스푼"],
     aiReason:
       "집에 쌈장이 남으셨나요? 고깃집에서 먹던 깊은 구수의 극치 라면 맛이 납니다.",
@@ -386,7 +444,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍲",
     difficulty: "쉬움",
     time: "10분",
-    need: ["cheese"],
+    need: ["i43"],
     missing: ["신라면 1봉지", "짜파게티 1봉지"],
     aiReason:
       "기생충에 소개된 짜파구리에 고소한 치즈를 더해 더 걸쭉하고 맛있게 즐겨봐요.",
@@ -412,7 +470,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🥔",
     difficulty: "쉬움",
     time: "12분",
-    need: ["cheese", "bacon"],
+    need: ["i43", "i44"],
     missing: ["허니버터칩 1봉지"],
     aiReason:
       "감자 가는 게 귀찮을 때! 허니버터 감자칩으로 순식간에 달콤 바삭한 감자전을 만들어요.",
@@ -442,7 +500,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍞",
     difficulty: "쉬움",
     time: "7분",
-    need: ["bread", "egg", "cheese"],
+    need: ["i39", "i02", "i43"],
     missing: ["종이컵"],
     aiReason:
       "핫케이크 가루 없이 식빵 한 장과 전자레인지만으로 계란빵의 맛을 완벽 재현합니다.",
