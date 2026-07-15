@@ -7,7 +7,7 @@
 // ✅ 확인만
 // ⬜ TODO(신규)
 
-import { state, showToast, render, updateCarouselRecipes } from './app.js';
+import { state, showToast, render as appRender, updateCarouselRecipes } from './app.js';
 import { INGREDIENTS } from './data.js';
 
 const CUSTOM_INGREDIENTS_KEY = 'customIngredients';
@@ -49,7 +49,8 @@ export function saveCustomIngredients(ingredients) {
 
 let showCategoryCandidates = false;
 let pendingCustomIngredientName = '';
-let ingredientRenderObserver = null;
+let isInitialized = false;
+let isComposingSearch = false;
 
 function normalizeIngredientName(name) {
   return String(name || '').trim().toLowerCase();
@@ -268,22 +269,34 @@ function updateSearchResults() {
   area.dataset.renderedSearch = signature;
 }
 
-export function initIngredient() {
-  if (window.__moduleEventHandlersActive) return;
-  window.__moduleEventHandlersActive = true;
+function render() {
+  appRender();
+  renderIngredientList();
+  updateFooter();
+}
 
-  const app = document.getElementById('app');
-  if (app && !ingredientRenderObserver) {
-    ingredientRenderObserver = new MutationObserver(() => {
-      applyIngredientVisibility();
-      updateSearchResults();
-    });
-    ingredientRenderObserver.observe(app, { childList: true, subtree: true });
-  }
+function renderIngredientList() {
+  applyIngredientVisibility();
+  updateSearchResults();
+}
+
+export function initIngredient() {
+  if (isInitialized) return;
+  isInitialized = true;
+
   applyIngredientVisibility();
   updateSearchResults();
 
   document.addEventListener('click', (event) => {
+    const fridgeEntry = event.target.closest('[data-nav="fridge"], #btn-start-fridge');
+    if (fridgeEntry) {
+      setTimeout(() => render(), 0);
+      return;
+    }
+
+    const navElement = event.target.closest('[data-nav]');
+    if (navElement) return;
+
     const deleteButton = event.target.closest('[data-delete-custom-ingredient]');
     if (deleteButton) {
       event.stopPropagation();
@@ -356,17 +369,12 @@ export function initIngredient() {
         state.activeCategory = pocket.dataset.cat;
         showCategoryCandidates = true;
         render();
-        applyIngredientVisibility();
-        updateSearchResults();
-        updateFooter();
         return;
       }
 
       state.activeCategory = pocket.dataset.cat;
       showCategoryCandidates = true;
       render();
-      applyIngredientVisibility();
-      updateSearchResults();
       return;
     }
 
@@ -401,9 +409,20 @@ export function initIngredient() {
     if (!event.target.matches('#fridge-search-input')) return;
     state.search = event.target.value.toLowerCase().trim();
     pendingCustomIngredientName = '';
-    if (state.search) showCategoryCandidates = true;
-    applyIngredientVisibility();
-    updateSearchResults();
+    if (event.isComposing || isComposingSearch) return;
+    renderIngredientList();
+  });
+
+  document.addEventListener('compositionstart', (event) => {
+    if (!event.target.matches('#fridge-search-input')) return;
+    isComposingSearch = true;
+  });
+
+  document.addEventListener('compositionend', (event) => {
+    if (!event.target.matches('#fridge-search-input')) return;
+    isComposingSearch = false;
+    state.search = event.target.value.toLowerCase().trim();
+    renderIngredientList();
   });
 }
 
