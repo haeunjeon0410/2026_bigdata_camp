@@ -35,10 +35,15 @@ function getIngredientName(need, recipeIngredient) {
   return String(value || fallback || need || '').trim();
 }
 
-function getIngredientAmount(need) {
+function getIngredientAmount(recipe, need) {
   if (need && typeof need === 'object') {
     return String(need.amount || need.quantity || '약간').trim() || '약간';
   }
+
+  if (typeof need === 'string') {
+    return recipe.needAmounts?.[need] || '약간';
+  }
+
   return '약간';
 }
 
@@ -58,10 +63,10 @@ function getMissingIngredients(recipe, selectedKeys) {
     const isSelected = [...needKeys].some((key) => selectedKeys.has(key));
     if (isSelected) return null;
 
-    return {
-      ingredientName: getIngredientName(need, recipeIngredient),
-      amount: getIngredientAmount(need)
-    };
+  return {
+  ingredientName: getIngredientName(need, recipeIngredient),
+  amount: getIngredientAmount(recipe, need)
+  };
   }).filter(Boolean).filter((ingredient) => ingredient.ingredientName);
 }
 
