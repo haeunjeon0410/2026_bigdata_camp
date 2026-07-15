@@ -5,7 +5,7 @@
 /* 추천 기능 모듈 */
 
 import { state, showToast, render, navigate, updateCarouselRecipes } from './app.js';
-import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { RECIPES, ALTERNATIVE_RECIPES, INGREDIENTS } from './data.js';
 
 // 추천 화면에서만 사용하는 취향 상태입니다. app.js의 state 구조는 변경하지 않습니다.
 const selectedPreferences = new Set();
@@ -15,25 +15,387 @@ let recipePage = 1;
 let isSearchComposing = false;
 let searchRefreshTimer = null;
 let activeDifficultyFilter = 'all';
-let lastRecipeViewMode = null;
-const recipeInsightState = {
-  recipeId: null,
-  status: 'idle'
-};
+const RECEIPT_MEMORY_KEY = 'bigdataCamp.receiptMemory.v1';
+const RECEIPT_ANALYSIS_MEMORY_KEY = 'bigdataCamp.receiptAnalyses.v1';
+const RECEIPT_IMAGE_DB_NAME = 'bigdataCamp.receiptImages.v1';
+const RECEIPT_IMAGE_STORE = 'receipts';
+let receiptAttachedAt = null;
+let receiptMemoryObserver = null;
+let receiptImageDbPromise = null;
+let receiptImageObjectUrls = [];
+let suppressNextReceiptImageSave = false;
+let activeReceiptImageId = null;
+const ingredientShelfLifeDays = [
+  { pattern: /생선|회|새우|조개|해산물/, days: 2 },
+  { pattern: /돼지고기|소고기|닭고기|고기|불고기|햄|소시지/, days: 3 },
+  { pattern: /두부|우유|계란|치즈|요거트|유제품/, days: 7 },
+  { pattern: /김치|장아찌|피클/, days: 30 },
+  { pattern: /대파|양파|감자|당근|양배추|애호박|채소|과일/, days: 7 },
+  { pattern: /밥|식빵|빵|국수|우동|파스타|면/, days: 5 }
+];
 
-const recipeInsightPresets = {
-  순두부찌개: {
-    cost: '약 2,900원',
-    costBasis: '1인분 · 기본 양념과 식용유 사용분 포함',
-    storage: [
-      ['순두부', '개봉 후 1~2일'],
-      ['계란', '냉장 2~3주'],
-      ['대파', '냉장 5~7일'],
-      ['다진 마늘', '냉장 3~5일']
-    ],
-    note: '제품 포장 소비기한과 개봉일을 우선 확인하세요. 아래 값은 보수적으로 잡은 참고용 추정치입니다.'
+function readReceiptMemory() {
+  try {
+    const analyses = JSON.parse(localStorage.getItem(RECEIPT_ANALYSIS_MEMORY_KEY) || '[]');
+    if (Array.isArray(analyses) && analyses.length) {
+      return analyses
+        .filter((analysis) => Array.isArray(analysis.items) && analysis.items.length)
+        .sort(compareReceiptAnalyses)[0] || { items: [] };
+    }
+    const value = JSON.parse(localStorage.getItem(RECEIPT_MEMORY_KEY) || 'null');
+    return value && Array.isArray(value.items) ? value : { items: [] };
+  } catch {
+    return { items: [] };
   }
-};
+}
+
+function getReceiptAnalysisTime(analysis) {
+  const time = new Date(analysis?.purchaseDate || analysis?.attachedAt).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function compareReceiptAnalyses(left, right) {
+  return getReceiptAnalysisTime(right) - getReceiptAnalysisTime(left)
+    || new Date(right?.attachedAt || 0).getTime() - new Date(left?.attachedAt || 0).getTime();
+}
+
+function readReceiptAnalyses() {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECEIPT_ANALYSIS_MEMORY_KEY) || '[]');
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeReceiptAnalyses(analyses) {
+  try { localStorage.setItem(RECEIPT_ANALYSIS_MEMORY_KEY, JSON.stringify(analyses)); } catch { /* 저장소가 없는 환경은 일회성 동작 */ }
+}
+
+function saveReceiptAnalysis(analysis) {
+  const analyses = readReceiptAnalyses().filter((item) => item.imageId !== analysis.imageId);
+  analyses.push(analysis);
+  writeReceiptAnalyses(analyses);
+}
+
+function deleteReceiptAnalysisForImage(imageId) {
+  if (!imageId) return;
+  const analyses = readReceiptAnalyses().filter((analysis) => analysis.imageId !== imageId);
+  writeReceiptAnalyses(analyses);
+  const latest = analyses
+    .filter((analysis) => Array.isArray(analysis.items) && analysis.items.length)
+    .sort(compareReceiptAnalyses)[0];
+  writeReceiptMemory(latest || { items: [] });
+  refreshReceiptInsights();
+}
+
+function deleteReceiptAnalysisItem(itemId) {
+  const storedAnalyses = readReceiptAnalyses();
+  if (!storedAnalyses.length) {
+    const legacyMemory = readReceiptMemory();
+    legacyMemory.items = legacyMemory.items.filter((item) => (item.id || item.name) !== itemId);
+    writeReceiptMemory(legacyMemory);
+    refreshReceiptInsights();
+    return;
+  }
+  const analyses = storedAnalyses.map((analysis) => ({
+    ...analysis,
+    items: analysis.items.filter((item) => (item.id || item.name) !== itemId),
+  })).filter((analysis) => analysis.items.length);
+  writeReceiptAnalyses(analyses);
+  const latest = analyses.sort(compareReceiptAnalyses)[0];
+  if (latest) writeReceiptMemory(latest);
+  else writeReceiptMemory({ items: [] });
+  refreshReceiptInsights();
+}
+
+function refreshReceiptInsights() {
+  document.querySelectorAll('[data-receipt-insight]').forEach((section) => section.remove());
+  decorateDetailPage();
+}
+
+function writeReceiptMemory(memory) {
+  try { localStorage.setItem(RECEIPT_MEMORY_KEY, JSON.stringify(memory)); } catch { /* 저장소가 없는 환경은 일회성 동작 */ }
+}
+
+function openReceiptImageDb() {
+  if (receiptImageDbPromise) return receiptImageDbPromise;
+  receiptImageDbPromise = new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) return reject(new Error('IndexedDB is not supported'));
+    const request = indexedDB.open(RECEIPT_IMAGE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(RECEIPT_IMAGE_STORE)) {
+        request.result.createObjectStore(RECEIPT_IMAGE_STORE, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  return receiptImageDbPromise;
+}
+
+function withReceiptImageStore(mode, callback) {
+  return openReceiptImageDb().then((db) => new Promise((resolve, reject) => {
+    const transaction = db.transaction(RECEIPT_IMAGE_STORE, mode);
+    const request = callback(transaction.objectStore(RECEIPT_IMAGE_STORE));
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  }));
+}
+
+function listStoredReceiptImages() {
+  return withReceiptImageStore('readonly', (store) => store.getAll())
+    .then((items) => items.sort((a, b) => b.createdAt - a.createdAt))
+    .catch(() => []);
+}
+
+function saveReceiptImage(file) {
+  const record = {
+    id: `receipt-image-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: file.name || '영수증 이미지',
+    type: file.type || 'image/jpeg',
+    size: file.size || 0,
+    blob: file,
+    createdAt: Date.now(),
+  };
+  activeReceiptImageId = record.id;
+  return withReceiptImageStore('readwrite', (store) => store.add(record))
+    .then(() => record)
+    .catch(() => null);
+}
+
+function deleteStoredReceiptImage(id) {
+  return withReceiptImageStore('readwrite', (store) => store.delete(id)).catch(() => null);
+}
+
+function clearStoredReceiptImages() {
+  return withReceiptImageStore('readwrite', (store) => store.clear()).catch(() => null);
+}
+
+function renderReceiptImageHistory(items) {
+  receiptImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  receiptImageObjectUrls = [];
+  if (!items.length) return '<li style="padding:8px 0; color:#777; font-size:11px;">기억하고 있는 영수증이 없습니다.</li>';
+  return items.map((item) => {
+    const url = URL.createObjectURL(item.blob);
+    receiptImageObjectUrls.push(url);
+    const date = new Date(item.createdAt);
+    const dateText = Number.isNaN(date.getTime()) ? '' : `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+    return `<li style="display:flex; align-items:center; gap:7px; padding:5px 0; border-bottom:1px solid rgba(0,0,0,.08);">
+      <button type="button" data-receipt-history-select="${escapeHtml(item.id)}" title="${escapeHtml(item.name)}" style="display:flex; align-items:center; gap:7px; flex:1; min-width:0; border:0; padding:0; background:transparent; text-align:left; cursor:pointer; color:inherit;">
+        <img src="${url}" alt="" style="width:34px; height:42px; object-fit:cover; border-radius:4px; border:1px solid rgba(0,0,0,.12);" />
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px;">${escapeHtml(item.name)}<small style="display:block; opacity:.65;">${dateText}</small></span>
+      </button>
+      <button type="button" data-receipt-history-delete="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.name)} 삭제" title="삭제" style="border:0; background:transparent; color:#b44; cursor:pointer; padding:3px; font-size:14px;">×</button>
+    </li>`;
+  }).join('');
+}
+
+function ensureReceiptHistoryPanel() {
+  const modal = document.querySelector('#receipt-modal.show');
+  const content = modal?.querySelector('.receipt-modal-content');
+  if (!content || content.querySelector('[data-receipt-history-panel]')) return;
+  content.style.position = content.style.position || 'relative';
+  const panel = document.createElement('aside');
+  panel.dataset.receiptHistoryPanel = 'true';
+  panel.setAttribute('aria-label', '첨부된 영수증 목록');
+  panel.style.cssText = 'position:absolute; top:14px; left:14px; z-index:2; width:148px; max-width:calc(100% - 28px);';
+  panel.innerHTML = '<button type="button" data-receipt-history-open aria-label="첨부된 영수증 목록 크게 보기" style="display:block; width:148px; max-width:100%; height:34px; overflow:hidden; padding:0 10px; border:1px solid rgba(0,0,0,.16); border-radius:8px; background:rgba(255,255,255,.97); box-shadow:0 2px 8px rgba(0,0,0,.1); color:inherit; font-size:11px; font-weight:700; line-height:32px; text-align:center; text-overflow:ellipsis; white-space:nowrap; cursor:pointer;">첨부된 영수증 목록</button>';
+  content.appendChild(panel);
+}
+
+function closeReceiptLibrary() {
+  document.querySelector('[data-receipt-history-library]')?.remove();
+  receiptImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  receiptImageObjectUrls = [];
+}
+
+function renderReceiptLibrary(items, selectedId) {
+  const overlay = document.querySelector('[data-receipt-history-library]');
+  if (!overlay) return;
+  receiptImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  receiptImageObjectUrls = [];
+  const selected = items.find((item) => item.id === selectedId) || items[0];
+  const selectedUrl = selected ? URL.createObjectURL(selected.blob) : '';
+  if (selectedUrl) receiptImageObjectUrls.push(selectedUrl);
+  const itemList = items.length
+    ? items.map((item) => {
+      const url = URL.createObjectURL(item.blob);
+      receiptImageObjectUrls.push(url);
+      return `<li style="display:flex; gap:6px; align-items:center; padding:6px; border:1px solid ${item.id === selected?.id ? '#e59a42' : 'rgba(0,0,0,.1)'}; border-radius:8px; background:${item.id === selected?.id ? '#fff7ea' : '#fff'};">
+        <button type="button" data-receipt-history-preview="${escapeHtml(item.id)}" style="display:flex; align-items:center; gap:7px; flex:1; min-width:0; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer;">
+          <img src="${url}" alt="" style="width:42px; height:54px; flex:0 0 auto; object-fit:cover; border-radius:4px; border:1px solid rgba(0,0,0,.12);" />
+          <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;">${escapeHtml(item.name)}</span>
+        </button>
+        <button type="button" data-receipt-history-delete="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.name)} 삭제" style="padding:3px; border:0; background:transparent; color:#b44; font-size:16px; cursor:pointer;">×</button>
+      </li>`;
+    }).join('')
+    : '<li style="padding:22px 8px; color:#777; text-align:center; font-size:12px;">기억하고 있는 영수증이 없습니다.</li>';
+  overlay.innerHTML = `<section role="dialog" aria-modal="true" aria-labelledby="receipt-history-title" style="display:flex; flex-direction:column; width:min(760px, calc(100vw - 32px)); height:min(680px, calc(100vh - 32px)); overflow:hidden; border-radius:14px; background:#fff; box-shadow:0 12px 40px rgba(0,0,0,.28);">
+    <header style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid rgba(0,0,0,.1);">
+      <div><h3 id="receipt-history-title" style="margin:0; font-size:18px;">첨부된 영수증 목록</h3><p style="margin:4px 0 0; color:#777; font-size:12px;">저장된 영수증을 크게 확인하고 선택할 수 있어요.</p></div>
+      <div style="display:flex; align-items:center; gap:8px; flex:0 0 auto;">
+        <button type="button" data-receipt-history-clear aria-label="저장된 영수증 전체 삭제" style="padding:7px 10px; border:1px solid #d99; border-radius:6px; background:#fff5f5; color:#a44; font-size:11px; white-space:nowrap; cursor:pointer;">전체 삭제</button>
+        <button type="button" data-receipt-history-close aria-label="영수증 목록 닫기" style="padding:4px 8px; border:0; background:transparent; font-size:22px; cursor:pointer;">×</button>
+      </div>
+    </header>
+    <div style="display:grid; grid-template-columns:minmax(190px, 0.8fr) minmax(0, 1.2fr); flex:1; min-height:0;">
+      <ul style="display:flex; flex-direction:column; gap:8px; overflow:auto; margin:0; padding:14px; list-style:none; border-right:1px solid rgba(0,0,0,.1);">${itemList}</ul>
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-width:0; padding:20px; background:#fafafa;">
+        ${selected ? `<img src="${selectedUrl}" alt="${escapeHtml(selected.name)} 크게 보기" style="width:auto; max-width:100%; height:min(430px, 62vh); object-fit:contain; border-radius:6px; box-shadow:0 3px 14px rgba(0,0,0,.16); background:#fff;" /><strong style="max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(selected.name)}</strong><button type="button" class="btn btn-primary" data-receipt-history-select="${escapeHtml(selected.id)}">이 영수증 사용</button>` : '<p style="color:#777;">확인할 영수증을 선택해 주세요.</p>'}
+      </div>
+    </div>
+  </section>`;
+}
+
+function openReceiptLibrary() {
+  closeReceiptLibrary();
+  const overlay = document.createElement('div');
+  overlay.dataset.receiptHistoryLibrary = 'true';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.58);';
+  document.body.appendChild(overlay);
+  listStoredReceiptImages().then((items) => renderReceiptLibrary(items));
+}
+
+function selectStoredReceiptImage(id) {
+  listStoredReceiptImages().then((items) => {
+    const record = items.find((item) => item.id === id);
+    const input = document.querySelector('#receipt-modal.show #receipt-file-input');
+    if (!record || !input) return;
+    activeReceiptImageId = record.id;
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([record.blob], record.name, { type: record.type || 'image/jpeg' }));
+    input.files = transfer.files;
+    suppressNextReceiptImageSave = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    closeReceiptLibrary();
+  });
+}
+
+function refreshReceiptHistoryPanel() {
+  const panel = document.querySelector('#receipt-modal.show [data-receipt-history-panel]');
+  const list = panel?.querySelector('[data-receipt-history-list]');
+  if (!panel || !list) return;
+  listStoredReceiptImages().then((items) => {
+    if (panel.isConnected) list.innerHTML = renderReceiptImageHistory(items);
+  });
+}
+
+function captureReceiptResult() {
+  const modal = document.querySelector('#receipt-modal');
+  const rows = [...(modal?.querySelectorAll('.receipt-result-item') || [])];
+  if (!rows.length) return;
+
+  const previous = readReceiptMemory();
+  const capturedAt = receiptAttachedAt || new Date().toISOString();
+  const imageId = activeReceiptImageId || `receipt-session-${capturedAt}`;
+  const items = rows.map((row) => {
+    const text = row.textContent.replace(/\s+/g, ' ').trim();
+    const name = row.querySelector('.receipt-result-copy strong')?.textContent.trim() || text;
+    const quantity = row.querySelector('.receipt-quantity')?.textContent.trim() || '';
+    const sourceId = row.querySelector('[data-receipt-item-id]')?.getAttribute('data-receipt-item-id') || name;
+    const id = `${imageId}-${sourceId}`;
+    return { id, name, quantity, capturedAt };
+  }).filter((item) => item.name);
+
+  const purchaseDate = modal.querySelector('[data-receipt-date]')?.getAttribute('data-receipt-date')
+    || modal.querySelector('.receipt-date')?.textContent.match(/\d{4}[./-]\d{1,2}[./-]\d{1,2}/)?.[0]
+    || null;
+  const analysis = {
+    imageId,
+    attachedAt: capturedAt,
+    purchaseDate,
+    items,
+  };
+  saveReceiptAnalysis(analysis);
+  writeReceiptMemory(analysis);
+}
+
+function startReceiptMemoryObserver() {
+  const receiptModal = document.querySelector('#receipt-modal');
+  if (receiptMemoryObserver || !receiptModal) return;
+  receiptMemoryObserver = new MutationObserver(() => {
+    captureReceiptResult();
+    queueMicrotask(ensureReceiptHistoryPanel);
+  });
+  // 영수증 모달 내부만 감시합니다. 문서 전체를 감시하면 냉장고 렌더링과 클릭 이벤트에 불필요한 부하를 줍니다.
+  receiptMemoryObserver.observe(receiptModal, { childList: true, subtree: true });
+}
+
+function getReceiptDate(memory) {
+  const source = memory.purchaseDate || memory.attachedAt;
+  const date = source ? new Date(source) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function formatShortDate(date) {
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getIngredientShelfLifeDays(name) {
+  return ingredientShelfLifeDays.find(({ pattern }) => pattern.test(name))?.days || 7;
+}
+
+function normalizeReceiptMatchText(value) {
+  return String(value || '')
+    .replace(/[\d().,/~%g·]/g, ' ')
+    .replace(/(개|팩|봉|병|캔|장|인분|그램|g|ml|kg|L|약간|작은술|큰술)/gi, ' ')
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
+function getRecipeIngredientNames(recipe) {
+  const names = [
+    ...(recipe.ingredients || []),
+    ...(recipe.need || []).map((id) => INGREDIENTS.find((ingredient) => ingredient.id === id)?.name)
+  ];
+  return [...new Set(names.map(normalizeReceiptMatchText).filter((name) => name.length >= 2))];
+}
+
+function filterReceiptItemsForRecipe(recipe, memory) {
+  const recipeIngredientNames = getRecipeIngredientNames(recipe);
+  return memory.items.filter((item) => {
+    const receiptName = normalizeReceiptMatchText(item.name);
+    return recipeIngredientNames.some((ingredientName) =>
+      receiptName.includes(ingredientName) || ingredientName.includes(receiptName),
+    );
+  });
+}
+
+function getIngredientExpiryLabel(item, memory) {
+  const baseDate = getReceiptDate(memory);
+  const expiryDate = new Date(baseDate);
+  expiryDate.setDate(expiryDate.getDate() + getIngredientShelfLifeDays(item.name));
+  const isExpired = expiryDate.getTime() < Date.now();
+  return `${formatShortDate(expiryDate)}까지${isExpired ? ' · 소비기한 지남' : ''}`;
+}
+
+function renderReceiptItems(items, memory) {
+  return items.map((item) => `
+    <li style="display:flex; justify-content:space-between; gap:8px; padding:3px 0;">
+      <span>${escapeHtml(item.name)}${item.quantity ? ` (${escapeHtml(item.quantity)})` : ''}</span>
+      <span style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+        <strong>${escapeHtml(getIngredientExpiryLabel(item, memory))}</strong>
+        <button type="button" data-receipt-item-delete="${escapeHtml(item.id || item.name)}" aria-label="${escapeHtml(item.name)} 다 먹은 것으로 표시하고 삭제" title="다 먹었어요" style="padding:1px 4px; border:1px solid rgba(0,0,0,.16); border-radius:4px; background:#fff; color:#777; font-size:10px; cursor:pointer;">삭제</button>
+      </span>
+    </li>
+  `).join('');
+}
+
+function renderReceiptInsight(recipe, leftPage) {
+  if (!leftPage || leftPage.querySelector('[data-receipt-insight]')) return;
+  const memory = readReceiptMemory();
+  const matchedItems = filterReceiptItemsForRecipe(recipe, memory);
+  if (!matchedItems.length) return;
+  const date = getReceiptDate(memory);
+  const section = document.createElement('section');
+  section.dataset.receiptInsight = 'true';
+  section.style.cssText = 'margin-top:14px; padding:12px; border:2px dashed var(--color-orange-deep); border-radius:var(--br-md); background:#fff8ed; color:var(--color-charcoal); font-size:13px; line-height:1.6; text-align:left;';
+  section.innerHTML = `<strong>🧾 이 레시피에 필요한 영수증 식재료</strong><div style="margin-top:6px;">기준일: ${escapeHtml(formatShortDate(date))}${memory.purchaseDate ? ' (구매일)' : ' (영수증 첨부일)'}<br><small>일치 품목 ${matchedItems.length}개</small><ul style="margin:7px 0 0; padding-left:18px;">${renderReceiptItems(matchedItems, memory)}</ul></div>`;
+  const meta = leftPage.querySelector('.notebook-detail-meta');
+  if (meta) meta.insertAdjacentElement('afterend', section);
+  else leftPage.appendChild(section);
+}
 
 export function hasActiveRecipeFilters() {
   return selectedCuisines.size > 0
@@ -65,61 +427,55 @@ const cuisineOverrides = {
 };
 
 const seasoningTips = {
-  감자전: '반죽에는 소금 1/3작은술만 넣습니다. 찍어 먹는 양념장은 진간장 1큰술·식초 1/2큰술·물 1/2큰술을 섞고, 싱거우면 간장 1/2작은술씩 보충하세요.',
-  볶음밥: '밥 1공기 기준 진간장 1큰술을 팬 가장자리에 둘러 향을 내고, 볶은 뒤 싱거우면 소금 1꼬집씩 추가합니다. 굴소스를 사용할 때는 1/2큰술만 넣고 간장은 1/2큰술로 줄이세요.',
-  오므라이스: '볶음밥에는 케첩 2큰술과 소금 1/4작은술을 넣고, 계란물에는 소금 1꼬집만 넣습니다. 완성 후 싱거우면 케첩 1작은술을 곁들이고 소금을 추가하지 마세요.',
-  덮밥: '돼지고기 150g 기준 진간장 1큰술·굴소스 1/2큰술·설탕 1/2큰술을 먼저 졸입니다. 소스가 반으로 줄어든 뒤 맛을 보고 싱거울 때만 진간장 1/2작은술씩 보충하세요.',
-  짜장면: '춘장 2큰술·설탕 1작은술·진간장 1/2큰술을 기준으로 합니다. 돼지고기와 양파에서 수분이 나오므로 소스가 걸쭉해진 뒤 맛을 보고, 싱거울 때만 춘장 1/2작은술씩 추가하세요.',
-  짬뽕: '물 500ml 기준 진간장 1큰술·소금 1/3작은술로 시작합니다. 채소와 고춧가루의 염도 차이가 있으니 5분 끓인 뒤 맛을 보고, 싱거울 때만 소금 1꼬집씩 추가하세요.',
-  탕수육: '소스는 물 150ml·식초 3큰술·설탕 3큰술·진간장 1큰술 비율로 끓입니다. 끓인 뒤 싱거우면 간장 1/2작은술, 시면 설탕 1/2작은술을 추가하고 전분물은 1큰술씩 넣어 농도를 맞추세요.',
-  카레라이스: '물 400ml와 카레가루 3큰술을 5분 끓인 뒤 맛을 봅니다. 싱거우면 소금 1/4작은술, 단맛이 부족하면 설탕 1/2작은술을 넣고 1분 더 끓이세요.',
-  비빔면: '1인분 양념은 고추장 2큰술·식초 1/2큰술·설탕 1/2큰술·간장 1/2큰술·참기름 1작은술입니다. 면을 비빈 뒤 싱거울 때 고추장 1/2큰술보다 간장 1/2작은술씩 추가하세요.',
-  '알리오 올리오': '면수는 물 1L에 소금 1큰술을 넣어 준비하고, 면과 면수 3큰술을 섞습니다. 완성 후 싱거우면 소금 1꼬집씩, 느끼하면 레몬즙 1작은술을 넣어 조절하세요.',
-  토마토파스타: '토마토소스 200g을 5분 졸인 뒤 소금 1/3작은술을 넣습니다. 면수 2큰술을 섞고 맛을 본 뒤 싱거우면 소금 1꼬집씩, 시면 설탕 1/4작은술을 추가하세요.',
-  볶음우동: '우동면 1인분에는 굴소스 1큰술·진간장 1/2큰술·설탕 1/3작은술을 사용합니다. 짜면 물 1큰술을 넣어 30초 볶고, 싱거우면 진간장 1/2작은술만 추가하세요.',
-  우동: '물 500ml 기준 진간장 1큰술·소금 1/4작은술로 시작합니다. 국물을 2분 끓인 뒤 싱거우면 소금 1꼬집씩, 짜면 물 50ml씩 넣어 맞추세요.',
-  잔치국수: '육수 600ml에 진간장 1큰술·소금 1/4작은술을 넣고 끓입니다. 김치나 양념장을 곁들이면 소금은 생략하고, 싱거울 때만 국간장 1/2작은술씩 추가하세요.',
-  비빔국수: '고추장 2큰술·식초 1큰술·설탕 1큰술·진간장 1/2큰술·참기름 1작은술을 기준으로 합니다. 비빈 뒤 매운맛이 강하면 설탕 1/2작은술, 싱거우면 간장 1/2작은술을 추가하세요.',
-  김치찌개: '물 400ml와 김치 1컵 기준 국간장 1/2큰술부터 넣습니다. 15분 끓인 뒤 싱거우면 국간장 1/2작은술씩, 짜면 물 50ml씩 넣고 2분 더 끓이세요.',
-  된장찌개: '물 400ml에 된장 1큰술을 풀고 먼저 끓입니다. 채소가 익은 뒤 맛을 보고 싱거울 때만 된장 1/2작은술씩 넣으며, 소금은 된장 추가 후에도 부족할 때만 1꼬집 사용하세요.',
-  순두부찌개: '물 300ml와 순두부 1봉 기준 진간장 1/2큰술·소금 1/4작은술로 맞춥니다. 계란을 넣은 뒤 싱거우면 소금 1꼬집, 매운맛이 부족하면 고춧가루 1/2작은술을 추가하세요.',
-  부대찌개: '스팸·소시지·김치가 들어가므로 처음에는 진간장 1큰술만 넣습니다. 15분 끓인 뒤 싱거울 때만 소금 1꼬집 또는 진간장 1/2작은술을 추가하고, 물은 50ml씩 보충하세요.',
-  미역국: '물 600ml에 국간장 1큰술을 넣고 20분 끓입니다. 마지막에 맛을 보고 싱거우면 국간장 1/2작은술씩, 짠맛이 강하면 물 50ml와 소금 대신 다진 마늘 1/2작은술을 넣으세요.',
-  계란국: '물 500ml에 진간장 1큰술을 먼저 넣고, 계란을 넣은 뒤 소금 1꼬집으로 마무리합니다. 싱거울 때는 소금 1꼬집씩만 추가하고 간장을 더 넣어 국물 색이 진해지지 않게 하세요.',
-  햄야채볶음: '스팸 100g 기준 굴소스 1큰술·케첩 1큰술·설탕 1/3작은술을 사용합니다. 스팸의 짠맛이 강하면 굴소스를 1/2큰술로 줄이고, 완성 후 싱거울 때만 굴소스 1/2작은술을 추가하세요.',
-  계란말이: '계란 3개에는 소금 1/3작은술 또는 참치액 1작은술 중 하나만 사용합니다. 햄·치즈를 넣으면 소금은 1/4작은술로 줄이고, 계란물은 굽기 전에 맛을 보아 1꼬집씩 조절하세요.',
-  감자볶음: '감자 1개 기준 소금 1/3작은술을 감자가 거의 익은 뒤 넣습니다. 베이컨이나 햄을 넣었다면 소금은 1/4작은술로 줄이고, 마지막에 후추 2꼬집으로 맛을 정리하세요.',
-  토스트: '계란 1개에는 설탕 1/2큰술·소금 1꼬집만 넣습니다. 잼을 곁들이면 소금은 생략하고, 케첩이나 햄을 넣을 때는 소금 1/2꼬집으로 줄여 단짠 균형을 맞추세요.',
-  샌드위치: '삶은 계란 2개와 마요네즈 2큰술에는 소금 1꼬집·후추 2꼬집을 넣습니다. 햄이나 치즈를 추가하면 소금은 넣지 말고, 싱거울 때만 머스터드 1/2작은술을 추가하세요.'
+  감자전: '반죽에는 소금을 아주 조금만 넣고, 간장·식초 양념장을 곁들여 먹을 때 최종 간을 맞추세요.',
+  볶음밥: '간장은 팬 가장자리에 둘러 향을 낸 뒤 넣고, 밥의 수분이 날아간 다음 소금으로 마지막 간을 보세요.',
+  오므라이스: '볶음밥은 케첩을 충분히 졸인 뒤 소금 한 꼬집만 더하고, 계란에는 소금을 아주 약하게 넣어 균형을 맞추세요.',
+  덮밥: '간장·굴소스는 처음부터 많이 넣지 말고 소스를 졸인 뒤 맛을 보며 한 번에 조금씩 보충하세요.',
+  카레라이스: '카레가루를 넣은 뒤 5분 정도 끓여 농도를 본 다음, 부족할 때만 소금이나 간장으로 보정하세요.',
+  비빔면: '고추장·식초·설탕을 먼저 섞어 맛을 맞추고, 면을 넣은 뒤에는 양념을 조금씩 추가해 짠맛을 피하세요.',
+  '알리오 올리오': '면수 자체를 살짝 짭짤하게 준비하고, 마지막에 면수 한두 숟갈로 유화한 뒤 소금은 끝에만 보충하세요.',
+  토마토파스타: '토마토소스를 먼저 충분히 졸여 산미와 수분을 줄인 뒤 소금으로 간하고, 면수는 조금씩 넣어 농도를 조절하세요.',
+  볶음우동: '굴소스는 채소와 면을 볶은 마지막 단계에 넣고, 면수나 물을 소량 더해 짠맛을 부드럽게 맞추세요.',
+  우동: '다시다 육수의 염도를 먼저 확인한 뒤 간장을 나누어 넣고, 대파를 넣기 직전에 최종 간을 보세요.',
+  잔치국수: '육수는 처음부터 짜게 하지 말고 끓인 뒤 국간장으로 맞추며, 김치나 양념장을 곁들일 경우 간을 더 약하게 하세요.',
+  비빔국수: '양념장은 고추장보다 식초와 설탕의 균형을 먼저 맞추고, 면을 비빈 뒤 부족한 양념만 추가하세요.',
+  김치찌개: '김치와 돼지고기를 먼저 볶아 감칠맛을 낸 뒤 끓이고, 김치의 염도를 확인한 다음 소금은 마지막에 결정하세요.',
+  된장찌개: '된장을 육수에 먼저 풀고 채소가 익은 뒤 간을 보세요. 된장마다 염도가 달라 소금 추가는 거의 필요하지 않을 수 있어요.',
+  순두부찌개: '고춧가루와 마늘을 볶은 기름에 육수를 더한 뒤, 순두부가 들어간 마지막에 국간장이나 소금으로 약하게 맞추세요.',
+  부대찌개: '스팸·소시지·김치에서 염분이 나오므로 충분히 끓인 뒤 맛을 보고, 부족할 때만 고춧가루보다 소량의 간장으로 보충하세요.',
+  미역국: '미역과 소고기를 참기름에 볶은 뒤 끓이고, 국간장은 한 번에 넣지 말고 끓이는 중간과 마지막에 나누어 넣으세요.',
+  계란국: '계란을 넣기 전에 육수와 간장을 먼저 맞추고, 계란을 넣은 뒤에는 젓지 말고 한소끔 끓여 부드러운 맛을 살리세요.',
+  햄야채볶음: '스팸과 굴소스가 이미 짤 수 있으니 채소를 먼저 볶고 굴소스는 불을 줄인 마지막에 조금씩 넣으세요.',
+  계란말이: '계란물에는 소금을 과하지 않게 넣고 5분 정도 두어 녹인 뒤, 한 번에 많이 붓지 말고 얇게 나누어 부치세요.',
+  감자볶음: '감자가 거의 익었을 때 소금을 넣어 수분이 빠지는 것을 줄이고, 마지막에 후추와 소금으로 간을 정리하세요.',
+  토스트: '계란물에는 설탕과 소금을 각각 한 꼬집만 넣어 단짠 균형을 만들고, 잼이나 케첩을 곁들일 때는 소금을 줄이세요.',
+  샌드위치: '마요네즈 속 계란과 채소에 소금을 따로 많이 넣지 말고, 마요네즈와 후추로 먼저 버무린 뒤 마지막에 한 번만 간을 보세요.'
 };
 
 const cookingMethods = {
-  감자전: '감자 2개를 깨끗이 씻어 강판에 갈고, 체에 밭쳐 물기를 가볍게 짭니다. 감자에 부침가루 2큰술·계란 1개·소금 1/3작은술을 섞어 반죽합니다. 팬에 식용유 2큰술을 두르고 중불로 달군 뒤 반죽을 얇게 펴서 앞뒤로 3~4분씩 노릇하게 부칩니다.',
-  볶음밥: '밥 1공기와 다진 채소를 준비하고, 팬에 식용유 1큰술을 둘러 중불로 달굽니다. 채소를 2분 볶은 뒤 계란 1개를 넣어 잘게 풀고, 밥을 넣어 덩어리를 눌러가며 볶습니다. 팬 가장자리에 진간장 1큰술을 둘러 향을 낸 뒤 섞고, 부족하면 소금 1~2꼬집으로 마무리합니다.',
-  오므라이스: '양파 1/4개를 잘게 다져 식용유에 2분 볶고 밥 1공기·케첩 2큰술·소금 1/4작은술을 넣어 3분 더 볶습니다. 계란 2개에 소금 1꼬집을 풀어 약불 팬에 얇게 익힌 뒤, 가운데에 볶음밥을 올리고 양옆을 접어 감쌉니다.',
-  덮밥: '돼지고기 150g과 양파 1/2개를 먹기 좋은 크기로 썹니다. 팬에 돼지고기를 중불로 4분 볶아 익힌 뒤 양파를 넣고 2분 더 볶습니다. 진간장 1큰술·굴소스 1/2큰술·설탕 1/2큰술·물 3큰술을 섞어 넣고 3분간 자작하게 졸여 밥 1공기 위에 올립니다.',
-  짜장면: '돼지고기 120g과 양파 1/2개를 잘게 썰어 식용유 2큰술에 중불로 3분 볶습니다. 불을 약하게 줄여 춘장 2큰술·설탕 1작은술·진간장 1/2큰술을 넣고 2분 볶아 기름에 춘장 향을 낸 뒤 물 250ml를 부어 5분 끓입니다. 전분가루 1큰술과 물 2큰술을 섞어 넣어 30초 걸쭉하게 만든 뒤 삶은 면 1인분 위에 소스를 올립니다.',
-  짬뽕: '돼지고기 100g과 대파 1/2대를 식용유 1큰술에 중불로 2분 볶아 향을 냅니다. 양파 1/2개·양배추 1컵을 센 불에서 2분 볶고 고춧가루 1큰술·진간장 1큰술을 넣어 30초 더 볶은 뒤 물 500ml를 붓습니다. 소금 1/3작은술로 간하고 5분 끓인 국물에 삶은 면 1인분을 넣어 1분 데웁니다.',
-  탕수육: '돼지고기 200g을 길쭉하게 썰어 소금 1/4작은술·후추 2꼬집으로 밑간하고, 전분가루 1컵과 물 3/4컵을 섞어 20분 두었다가 윗물을 따라냅니다. 고기에 전분 반죽을 묻혀 170℃ 기름에서 3분 튀긴 뒤 건져 1분 식히고, 180℃에서 1분 더 튀겨 바삭하게 만듭니다. 물 150ml·식초 3큰술·설탕 3큰술·진간장 1큰술을 끓인 뒤 전분물 1큰술을 넣어 농도를 맞추고 튀긴 고기에 곁들입니다.',
-  카레라이스: '감자 1개·당근 1/3개·양파 1/2개를 한입 크기로 썰어 식용유 1큰술에 양파부터 2분 볶습니다. 감자와 당근을 넣고 3분 더 볶은 뒤 물 400ml를 부어 10분 끓입니다. 불을 약하게 줄여 카레가루 3큰술을 풀고 5분 더 저어 끓인 뒤 밥에 붓습니다.',
-  비빔면: '고추장 2큰술·식초 1/2큰술·설탕 1/2큰술·간장 1/2큰술·참기름 1작은술을 그릇에 넣고 설탕이 녹을 때까지 섞습니다. 국수 1인분을 삶아 찬물에 2~3번 헹군 뒤 물기를 충분히 뺍니다. 양념장 2/3를 먼저 넣어 버무리고 맛을 보며 나머지를 추가합니다.',
-  '알리오 올리오': '스파게티면 100g을 소금 1큰술을 넣은 끓는 물에 포장 시간보다 1분 짧게 삶고 면수 3큰술을 남깁니다. 팬에 올리브유 3큰술과 편 썬 마늘 4쪽을 넣어 약불에서 3분 볶습니다. 면과 면수를 넣어 1분간 섞어 소스를 입힌 뒤 소금 1꼬집과 후추로 맞춥니다.',
-  토마토파스타: '면 100g을 소금물에 삶고 면수 2큰술을 남겨 둡니다. 팬에 올리브유 1큰술을 두르고 마늘 2쪽·양파 1/4개를 중불에서 3분 볶습니다. 토마토소스 200g을 넣어 5분 졸인 뒤 면과 면수를 넣고 1분 더 섞어 소금 1/3작은술로 마무리합니다.',
-  볶음우동: '우동면 1인분을 끓는 물에 1분 데친 뒤 물기를 뺍니다. 팬에 식용유 1큰술을 두르고 양배추와 당근을 중불에서 3분 볶은 뒤 면을 넣습니다. 굴소스 1큰술·진간장 1/2큰술·설탕 1/3작은술·물 2큰술을 넣고 센 불에서 2분 빠르게 볶습니다.',
-  우동: '냄비에 물 500ml와 다시다 1/2작은술을 넣어 끓입니다. 진간장 1큰술·소금 1/4작은술을 넣어 국물 간을 맞춘 뒤 우동면 1인분을 넣고 2분 데웁니다. 불을 끄기 직전에 대파 1/3대를 올려 뜨거운 국물에 살짝 익힙니다.',
-  잔치국수: '냄비에 물 600ml와 다시다 1작은술을 넣고 끓인 뒤 진간장 1큰술·소금 1/4작은술로 육수를 맞춥니다. 국수 1인분은 별도 냄비에서 삶아 찬물에 헹구고 물기를 뺍니다. 그릇에 국수를 담고 뜨거운 육수를 부은 뒤 계란지단과 대파를 올립니다.',
-  비빔국수: '고추장 2큰술·식초 1큰술·설탕 1큰술·진간장 1/2큰술·참기름 1작은술을 먼저 섞어 양념장을 만듭니다. 국수 1인분을 삶아 찬물에 헹군 뒤 물기를 빼고 양념 2/3만 넣어 버무립니다. 맛을 본 뒤 남은 양념을 조금씩 추가해 새콤함과 단맛을 조절합니다.',
-  김치찌개: '냄비에 돼지고기 150g과 잘 익은 김치 1컵을 넣고 참기름 1작은술로 중불에서 3분 볶습니다. 물 400ml와 고춧가루 1/2큰술을 넣고 끓으면 중약불로 줄여 15분 끓입니다. 두부와 대파를 넣고 3분 더 끓인 뒤 부족할 때만 국간장 1/2큰술을 추가합니다.',
-  된장찌개: '냄비에 물 400ml와 된장 1큰술을 체에 풀어 끓입니다. 감자·양파·애호박을 넣고 중불에서 8분 끓여 채소를 익힙니다. 두부를 넣은 뒤 다진 마늘 1/2작은술과 고춧가루 1/3작은술을 넣고 3분 더 끓인 다음, 마지막에 소금으로 간을 조절합니다.',
-  순두부찌개: '냄비에 식용유 1큰술을 두르고 고춧가루 1큰술·다진 마늘 1/2큰술을 약불에서 30초 볶아 향을 냅니다. 물 300ml와 순두부 1봉을 넣고 중불에서 5분 끓입니다. 진간장 1/2큰술·소금 1/4작은술로 간을 맞추고 계란 1개를 올려 1분 더 익힙니다.',
-  부대찌개: '냄비에 먹기 좋게 썬 스팸 100g·소시지 100g·김치 1/2컵을 담고 물 500ml를 붓습니다. 고춧가루 1큰술·진간장 1큰술·다진 마늘 1/2큰술을 넣고 끓으면 중불로 줄여 15분 끓입니다. 재료에서 간이 우러난 뒤 맛을 보고 부족할 때만 소금 1꼬집을 추가합니다.',
-  미역국: '불린 미역 1컵은 물기를 짜고 먹기 좋게 자릅니다. 냄비에 미역과 소고기 100g을 넣고 참기름 1큰술로 중불에서 3분 볶습니다. 물 600ml를 넣고 끓으면 약불로 줄여 20분 끓인 뒤 국간장 1큰술·소금 1/4작은술로 간을 맞춥니다.',
-  계란국: '냄비에 물 500ml·다시다 1/2작은술·진간장 1큰술을 넣고 끓입니다. 계란 2개를 충분히 풀어 국물이 끓는 지점에 가늘게 부은 뒤 30초간 젓지 않고 익힙니다. 대파를 넣고 마지막에 소금 1~2꼬집으로만 간을 조절합니다.',
-  햄야채볶음: '스팸 100g과 양파·당근·양배추를 한입 크기로 썹니다. 팬에 식용유 1큰술을 두르고 스팸을 먼저 2분 볶은 뒤 채소를 넣어 3분 더 볶습니다. 굴소스 1큰술·케첩 1큰술·설탕 1/3작은술을 넣고 센 불에서 1분간 섞어 마무리합니다.',
-  계란말이: '계란 3개에 소금 1/3작은술·물 1큰술을 풀고 다진 당근과 대파를 섞습니다. 팬에 식용유를 얇게 두르고 약불로 달군 뒤 계란물을 3~4번 나누어 붓습니다. 표면이 반쯤 익었을 때마다 돌돌 말고, 완성 후 1분 식혀 단단하게 썹니다.',
-  감자볶음: '감자 1개와 당근·양파를 가늘게 채 썰어 감자는 물에 2분 담갔다가 물기를 뺍니다. 팬에 식용유 1큰술을 두르고 감자를 중불에서 4분 볶은 뒤 물 2큰술을 넣고 뚜껑을 덮어 2분 익힙니다. 당근과 양파를 넣고 소금 1/3작은술·후추를 넣어 2분 더 볶습니다.',
-  토스트: '계란 1개에 설탕 1/2큰술·소금 1꼬집을 풀어 식빵 2장 양면에 고르게 묻힙니다. 팬에 식용유 1큰술을 두르고 중약불에서 빵을 앞뒤로 2~3분씩 구워 속까지 익힙니다. 노릇해진 토스트에 취향에 따라 설탕이나 잼을 소량 곁들입니다.',
-  샌드위치: '계란 2개를 10분 삶아 껍질을 벗긴 뒤 포크로 으깹니다. 마요네즈 2큰술·소금 1꼬집·후추 약간을 섞어 계란 샐러드를 만들고, 식빵에 물기를 닦은 양배추를 먼저 올립니다. 계란 샐러드를 얹어 간을 본 뒤 다른 식빵으로 덮어 반으로 자릅니다.'
+  감자전: '감자 2개를 갈아 물기를 가볍게 짜고, 부침가루 2큰술·계란 1개·소금 1/3작은술을 섞습니다. 팬에 식용유 2큰술을 두르고 중불에서 앞뒤로 노릇하게 부칩니다.',
+  볶음밥: '밥 1공기와 다진 채소를 준비합니다. 팬에 식용유 1큰술을 두르고 채소와 계란 1개를 볶은 뒤 밥을 넣습니다. 팬 가장자리에 진간장 1큰술을 둘러 볶고, 부족하면 소금 1~2꼬집으로 마무리합니다.',
+  오므라이스: '양파 1/4개를 볶고 밥 1공기·케첩 2큰술·소금 1/4작은술을 넣어 볶습니다. 계란 2개에 소금 1꼬집을 풀어 얇게 익힌 뒤 볶음밥을 감쌉니다.',
+  덮밥: '돼지고기 150g과 양파 1/2개를 볶습니다. 진간장 1큰술·굴소스 1/2큰술·설탕 1/2큰술·물 3큰술을 섞어 넣고 자작하게 졸인 뒤 밥 1공기 위에 올립니다.',
+  카레라이스: '감자 1개·당근 1/3개·양파 1/2개를 식용유 1큰술에 볶고 물 400ml를 넣어 익힙니다. 불을 약하게 줄여 카레가루 3큰술을 풀고 5분 더 끓인 뒤 밥에 붓습니다.',
+  비빔면: '고추장 2큰술·식초 1/2큰술·설탕 1/2큰술·간장 1/2큰술·참기름 1작은술을 섞습니다. 삶아 찬물에 헹군 국수 1인분에 양념장을 2/3부터 넣고 맛을 보며 추가합니다.',
+  '알리오 올리오': '스파게티면 100g을 소금 1큰술을 넣은 물에 삶습니다. 올리브유 3큰술에 마늘 4쪽을 볶고 면과 면수 3큰술을 넣어 섞습니다. 마지막에 소금 1꼬집과 후추로 맞춥니다.',
+  토마토파스타: '면 100g을 삶고, 올리브유 1큰술에 마늘 2쪽·양파 1/4개를 볶습니다. 토마토소스 200g을 넣어 5분 졸인 뒤 면과 면수 2큰술을 넣고 소금 1/3작은술로 마무리합니다.',
+  볶음우동: '우동면 1인분을 데칩니다. 식용유 1큰술에 양배추와 당근을 볶고 면을 넣습니다. 굴소스 1큰술·진간장 1/2큰술·설탕 1/3작은술·물 2큰술을 넣어 볶습니다.',
+  우동: '물 500ml에 다시다 1/2작은술을 풀어 끓입니다. 진간장 1큰술·소금 1/4작은술로 국물 간을 맞추고 우동면 1인분을 넣습니다. 대파 1/3대를 마지막에 올립니다.',
+  잔치국수: '물 600ml에 다시다 1작은술을 풀고 진간장 1큰술·소금 1/4작은술로 육수를 맞춥니다. 국수 1인분을 따로 삶아 넣고 계란지단과 대파를 올립니다.',
+  비빔국수: '고추장 2큰술·식초 1큰술·설탕 1큰술·진간장 1/2큰술·참기름 1작은술을 섞습니다. 국수 1인분에 양념을 2/3만 먼저 넣고 비빈 뒤 새콤함과 단맛을 조절합니다.',
+  김치찌개: '돼지고기 150g과 김치 1컵을 참기름 1작은술에 볶습니다. 물 400ml와 고춧가루 1/2큰술을 넣고 15분 끓인 뒤 두부와 대파를 넣습니다. 부족할 때만 국간장 1/2큰술을 추가합니다.',
+  된장찌개: '물 400ml에 된장 1큰술을 풀고 감자·양파·애호박을 넣어 끓입니다. 두부를 넣은 뒤 다진 마늘 1/2작은술과 고춧가루 1/3작은술을 넣고, 마지막에 소금으로 간을 조절합니다.',
+  순두부찌개: '식용유 1큰술에 고춧가루 1큰술·다진 마늘 1/2큰술을 약불로 볶습니다. 물 300ml와 순두부 1봉을 넣고 끓인 뒤 진간장 1/2큰술·소금 1/4작은술로 맞추고 계란 1개를 넣습니다.',
+  부대찌개: '스팸 100g·소시지 100g·김치 1/2컵에 물 500ml를 넣습니다. 고춧가루 1큰술·진간장 1큰술·다진 마늘 1/2큰술을 넣고 15분 끓인 뒤, 맛을 보고 부족할 때만 소금 1꼬집을 추가합니다.',
+  미역국: '불린 미역 1컵과 소고기 100g을 참기름 1큰술에 볶습니다. 물 600ml를 넣고 20분 끓인 뒤 국간장 1큰술·소금 1/4작은술로 간을 맞춥니다.',
+  계란국: '물 500ml에 다시다 1/2작은술과 진간장 1큰술을 넣어 끓입니다. 계란 2개를 풀어 천천히 넣고 대파를 올립니다. 마지막에 소금 1~2꼬집으로만 조절합니다.',
+  햄야채볶음: '스팸 100g과 양파·당근·양배추를 식용유 1큰술에 볶습니다. 굴소스 1큰술·케첩 1큰술·설탕 1/3작은술을 넣고 센 불에서 1분 더 볶습니다.',
+  계란말이: '계란 3개에 소금 1/3작은술·물 1큰술을 풀고 다진 당근과 대파를 섞습니다. 팬에 식용유를 얇게 두르고 계란물을 3~4번 나누어 부어 약불에서 말아줍니다.',
+  감자볶음: '감자 1개와 당근·양파를 채 썹니다. 식용유 1큰술에 감자를 먼저 볶고 물 2큰술을 넣어 익힌 뒤 소금 1/3작은술과 후추로 마무리합니다.',
+  토스트: '계란 1개에 설탕 1/2큰술·소금 1꼬집을 풀어 식빵 2장에 묻힙니다. 식용유 1큰술에 앞뒤로 굽고, 취향에 따라 설탕이나 잼을 소량 곁들입니다.',
+  샌드위치: '삶은 계란 2개를 으깨 마요네즈 2큰술·소금 1꼬집·후추 약간을 섞습니다. 식빵에 양배추와 계란 샐러드를 올리고, 간을 본 뒤 빵을 덮습니다.'
 };
 
 const extraIngredientTips = {
@@ -156,7 +512,9 @@ const RECIPE_DETAIL_INFO = {
 
 function getCanonicalRecipeName(recipe) {
   const recipeName = String(recipe?.name || '').trim();
-  return ['덮밥', '돼지고기덮밥', '돼지고기 덮밥'].includes(recipeName) ? '덮밥' : recipeName;
+  return ['덮밥', '돼지고기덮밥', '돼지고기 덮밥'].includes(recipeName)
+    ? '덮밥'
+    : recipeName;
 }
 
 function getExtraIngredientTip(recipe) {
@@ -175,38 +533,15 @@ function getSeasoningTip(recipe) {
     || '재료에서 나오는 염도를 먼저 확인하고, 조리가 끝나기 직전에 한 꼬집씩 보충해 가장 알맞은 간을 맞추세요.';
 }
 
-function decorateSubstituteTips(detailContainer, recipe) {
-  const tips = Array.isArray(recipe?.substituteTips) ? recipe.substituteTips : [];
-  const tipsList = detailContainer.querySelector('.substitute-tips .tips-list');
-  if (!tipsList || !tips.length) return;
-
-  tipsList.innerHTML = tips.map((tip) => {
-    const original = String(tip?.original || '').trim();
-    const alternatives = (Array.isArray(tip?.alternatives) ? tip.alternatives : [tip?.alternatives])
-      .filter(Boolean)
-      .map((item) => String(item).trim())
-      .filter(Boolean);
-    const note = String(tip?.note || '')
-      .replace(/\band\b/gi, '그리고')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!original || !alternatives.length) return '';
-
-    return `
-      <li>
-        <strong>${escapeHtml(original)}</strong> 재료가 없을 때는 ${escapeHtml(alternatives.join(' 또는 '))}를 사용해 보세요.
-        ${note ? `<span>${escapeHtml(note)}</span>` : ''}
-      </li>
-    `;
-  }).join('');
-}
-
 function getRecipeName(recipe) {
-  return getCanonicalRecipeName(recipe) === '덮밥' ? '돼지고기 덮밥' : recipe?.name;
+  return getCanonicalRecipeName(recipe) === '덮밥'
+    ? '돼지고기 덮밥'
+    : recipe?.name;
 }
 
 function classifyCuisine(recipe) {
   const recipeName = String(recipe?.name || '').trim();
+  if (recipe?.cuisineType) return recipe.cuisineType;
   if (cuisineOverrides[recipeName]) return cuisineOverrides[recipeName];
   if (String(recipe?.id || '').startsWith('alt')) return '편의점';
   const text = [recipe.name, recipe.category, ...(recipe.ingredients || [])].join(' ');
@@ -282,14 +617,10 @@ export function applyRecipeFilters() {
     };
   });
 
-  // 편의점 꿀조합은 취향·상황·요리 종류·난이도·검색 조건과 관계없이 전체 목록을 보여줍니다.
   if (state.showingAlternatives) {
-    const allAlternativeRecipes = recipes.sort((a, b) =>
-      b.rate - a.rate || getMinutes(a) - getMinutes(b)
+    state.carouselRecipes = recipes.sort(
+      (a, b) => b.rate - a.rate || getMinutes(a) - getMinutes(b),
     );
-    recipeSearchQuery = '';
-    activeDifficultyFilter = 'all';
-    state.carouselRecipes = allAlternativeRecipes;
     state.currentCarouselIndex = 0;
     return;
   }
@@ -426,20 +757,6 @@ export function decorateRecipeCard() {
       else recipesContainer.appendChild(overview);
     }
 
-    if (state.carouselRecipes.length === 0) {
-      // app.js가 빈 결과 화면을 렌더한 직후에도 이전 카드와 페이지네이션이 남지 않도록 정리합니다.
-      carousel?.querySelector('.carousel-track')?.replaceChildren();
-      dots?.replaceChildren();
-      overview.replaceChildren();
-      overview.style.cssText = 'width:100%; max-width:1400px; margin:0 auto 18px;';
-      overview.innerHTML = `
-        <div style="width:100%; padding:30px; box-sizing:border-box; text-align:center;">
-          검색 조건에 맞는 레시피가 없어요.
-        </div>
-      `;
-      return;
-    }
-
     const pageSize = 10;
     const pageCount = Math.max(1, Math.ceil(state.carouselRecipes.length / pageSize));
     recipePage = Math.min(recipePage, pageCount);
@@ -478,201 +795,6 @@ export function decorateRecipeCard() {
 
 }
 
-function renderCarouselMissingIngredients(recipe) {
-  const missing = Array.isArray(recipe?.missing) ? recipe.missing : [];
-  const normalize = (value) => String(value ?? '').trim().toLowerCase();
-  const tips = Array.isArray(recipe?.substituteTips) ? recipe.substituteTips : [];
-  const applicableTips = tips
-    .filter((tip) => tip && tip.original && Array.isArray(tip.alternatives) && tip.alternatives.length)
-    .filter((tip) => missing.some((ingredient) => normalize(ingredient) === normalize(tip.original)));
-  const substituteOriginals = new Set(applicableTips.map((tip) => normalize(tip.original)));
-  const unresolved = missing.filter((ingredient) => !substituteOriginals.has(normalize(ingredient)));
-
-  if (missing.length === 0) {
-    return `
-      <div class="recipe-missing-box" style="border-color: var(--color-mint); border-left-color: var(--color-mint); background-color: var(--color-mint-light);">
-        <div class="recipe-missing-title" style="color: var(--color-mint-deep)">✨ 완벽해요!</div>
-        <div class="recipe-missing-items" style="color: var(--color-mint-deep)">필요한 재료가 모두 준비되어 있어요!</div>
-      </div>
-    `;
-  }
-
-  if (applicableTips.length > 0) {
-    const substitutions = applicableTips.map((tip) =>
-      `${escapeHtml(tip.original)} 대신 ${tip.alternatives.map(escapeHtml).join(', ')}를 사용해보세요.`
-    );
-    if (unresolved.length > 0) {
-      substitutions.push(`여전히 필요한 재료: ${unresolved.map(escapeHtml).join(', ')}`);
-    }
-    return `
-      <div class="recipe-missing-box">
-        <div class="recipe-missing-title">💡 대체 재료로 만들 수 있어요!</div>
-        <div class="recipe-missing-items">${substitutions.join('<br>')}</div>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="recipe-missing-box">
-      <div class="recipe-missing-title">🛒 재료가 조금 부족해요!</div>
-      <div class="recipe-missing-items">${missing.map(escapeHtml).join(', ')}</div>
-    </div>
-  `;
-}
-
-function renderCarouselRecipeCard(recipe) {
-  const missing = renderCarouselMissingIngredients(recipe);
-  const isFav = state.favorites.has(recipe.id);
-  return `
-    <div class="recipe-card-box" style="height:100%;">
-      <div class="recipe-card-header">
-        ${recipe.emoji || '🍽️'}
-        <button class="recipe-fav-toggle ${isFav ? 'active' : ''}" data-recipe-id="${recipe.id}" aria-label="즐겨찾기">
-          ${isFav ? '❤️' : '🤍'}
-        </button>
-      </div>
-      <div class="recipe-card-body" style="display:flex; flex-direction:column; height:100%;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <h3 class="recipe-card-title">${escapeHtml(getRecipeName(recipe))}</h3>
-          <span class="recipe-meta-tag match-tag">매치율 ${recipe.rate || 0}%</span>
-        </div>
-        <div class="recipe-meta-tags">
-          <span class="recipe-meta-tag">⭐ ${escapeHtml(recipe.difficulty || '')}</span>
-          <span class="recipe-meta-tag">⏱️ ${escapeHtml(recipe.time || '')}</span>
-        </div>
-        ${missing}
-        <div class="recipe-action" style="margin-top:auto; width:100%;">
-          <button class="btn btn-primary recipe-detail-btn" id="btn-view-steps-${recipe.id}" data-rid="${recipe.id}">
-            ${String(recipe.id).startsWith('alt') ? '영수증 보기' : '레시피 보기'}
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function decorateCarouselView() {
-  if (state.route !== 'recipes' || state.recipeViewMode === 'menu') return;
-  const recipesContainer = document.querySelector('.recipes-container');
-  const carousel = recipesContainer?.querySelector('.carousel-wrapper');
-  if (!recipesContainer || !carousel) return;
-
-  let toolbar = recipesContainer.querySelector('[data-recipe-display-toolbar]');
-  if (!toolbar) {
-    toolbar = document.createElement('div');
-    toolbar.dataset.recipeDisplayToolbar = 'true';
-    toolbar.style.cssText = 'display:flex; justify-content:flex-end; align-items:center; gap:8px; margin:0 0 10px;';
-    toolbar.innerHTML = `
-      <span style="font-size:13px; font-weight:800; color:var(--color-gray);">보기</span>
-      <button type="button" class="btn btn-outline" data-recipe-display="one" style="padding:6px 10px; font-size:12px;">1개 보기</button>
-      <button type="button" class="btn btn-outline" data-recipe-display="three" style="padding:6px 10px; font-size:12px;">3개 보기</button>
-    `;
-    recipesContainer.insertBefore(toolbar, carousel);
-  }
-
-  const displayMode = state.recipeCardDisplayMode || 'one';
-  toolbar.querySelectorAll('[data-recipe-display]').forEach((button) => {
-    const active = button.dataset.recipeDisplay === displayMode;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', String(active));
-  });
-
-  const track = carousel.querySelector('.carousel-track');
-  if (!track) return;
-  carousel.querySelectorAll('#btn-carousel-prev, #btn-carousel-next').forEach((button) => {
-    button.style.zIndex = '20';
-    button.style.pointerEvents = 'auto';
-  });
-  if (displayMode === 'three' && state.carouselRecipes.length > 1) {
-    const recipes = state.carouselRecipes;
-    const pageSize = 3;
-    const pageCount = Math.ceil(recipes.length / pageSize);
-    const currentPage = Math.min(
-      Math.floor(state.currentCarouselIndex / pageSize),
-      pageCount - 1
-    );
-    state.currentCarouselIndex = currentPage * pageSize;
-    const visibleRecipes = recipes.slice(
-      state.currentCarouselIndex,
-      state.currentCarouselIndex + pageSize
-    );
-    track.innerHTML = visibleRecipes.map(renderCarouselRecipeCard).join('');
-    // 1개 보기의 카드 폭은 유지하고, 3개 보기에서만 카드 3개가 들어갈 만큼 프레임을 확장합니다.
-    carousel.style.maxWidth = '1120px';
-    track.style.cssText = 'display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px; align-items:stretch; width:100%;';
-    const dislikeButton = carousel.querySelector('#btn-dislike-recipe');
-    if (dislikeButton) {
-      dislikeButton.style.right = visibleRecipes.length === 1 ? 'calc(66.666% + 6px)' : '6px';
-    }
-
-    const dots = recipesContainer.querySelector('.carousel-dots');
-    if (dots) {
-      dots.innerHTML = Array.from({ length: pageCount }, (_, page) => `
-        <span class="carousel-dot ${page === currentPage ? 'active' : ''}" data-index="${page * pageSize}"></span>
-      `).join('');
-    }
-    const counter = dots?.nextElementSibling;
-    if (counter?.tagName === 'P') counter.textContent = `${currentPage + 1} / ${pageCount}`;
-  } else {
-    carousel.style.maxWidth = '';
-    track.style.cssText = '';
-    const dislikeButton = carousel.querySelector('#btn-dislike-recipe');
-    if (dislikeButton) dislikeButton.style.right = '';
-  }
-
-  bindCarouselNavigation(carousel);
-}
-
-function moveCarousel(offset) {
-  const recipes = state.carouselRecipes;
-  if (!recipes.length) return;
-
-  const pageSize = state.recipeCardDisplayMode === 'three' ? 3 : 1;
-  if (pageSize === 1) {
-    state.currentCarouselIndex = (state.currentCarouselIndex + offset + recipes.length) % recipes.length;
-  } else {
-    const pageCount = Math.ceil(recipes.length / pageSize);
-    const currentPage = Math.floor(state.currentCarouselIndex / pageSize);
-    state.currentCarouselIndex = ((currentPage + offset + pageCount) % pageCount) * pageSize;
-  }
-  state.carouselDirection = offset > 0 ? 'right' : 'left';
-  // 편의점 레시피는 applyRecipeFilters()가 실행될 때마다 인덱스를 0으로
-  // 초기화하므로, 카드 이동 중에는 현재 결과 목록을 그대로 유지합니다.
-  state.preserveRecipeResults = true;
-  render();
-  decorateCarouselView();
-}
-
-function bindCarouselNavigation(carousel) {
-  const previous = carousel.querySelector('#btn-carousel-prev');
-  const next = carousel.querySelector('#btn-carousel-next');
-  if (previous) {
-    previous.onclick = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      moveCarousel(-1);
-    };
-  }
-  if (next) {
-    next.onclick = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      moveCarousel(1);
-    };
-  }
-
-  carousel.querySelectorAll('.carousel-dot').forEach((dot) => {
-    dot.onclick = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      state.currentCarouselIndex = Number(dot.dataset.index) || 0;
-      state.preserveRecipeResults = true;
-      render();
-      decorateCarouselView();
-    };
-  });
-}
-
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>'"]/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -706,91 +828,18 @@ function scheduleRecipeSearch(searchInput) {
   }, 180);
 }
 
-function getRecipeInsight(recipe) {
-  return recipeInsightPresets[getCanonicalRecipeName(recipe)] || null;
-}
-
-function renderRecipeInsightPanel(leftPage, recipe) {
-  if (!leftPage) return;
-  const insight = getRecipeInsight(recipe);
-  const existing = leftPage.querySelector('[data-recipe-insight]');
-  if (!insight) {
-    existing?.remove();
-    return;
-  }
-
-  const isCurrentRecipe = recipeInsightState.recipeId === recipe.id;
-  const status = isCurrentRecipe ? recipeInsightState.status : 'idle';
-  const panel = existing || document.createElement('section');
-  panel.dataset.recipeInsight = 'true';
-  panel.style.cssText = 'margin-top:14px; padding:12px; border:2px solid var(--color-orange-deep); border-radius:var(--br-md); background:linear-gradient(135deg, #fff8ed, #fffdf8); color:var(--color-charcoal); font-size:12px; line-height:1.55; text-align:left;';
-
-  if (status === 'loading') {
-    panel.innerHTML = `
-      <strong style="display:block; color:var(--color-orange-deep);">🤖 AI가 정보를 정리하고 있어요</strong>
-      <span style="display:block; margin-top:4px;">보관 권장기간과 1인분 예상비용을 계산하는 중...</span>
-      <span aria-hidden="true" style="display:block; margin-top:7px; width:100%; height:5px; border-radius:99px; background:var(--color-cream-dark); overflow:hidden;"><i style="display:block; width:45%; height:100%; background:var(--color-orange); animation:progress-loading 1s ease-in-out infinite alternate;"></i></span>
-    `;
-  } else if (status === 'ready') {
-    panel.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;"><strong style="color:var(--color-orange-deep);">🤖 AI 판단 요약</strong><span style="font-size:10px; color:var(--color-gray);">순두부찌개</span></div>
-      <div style="margin-top:8px; padding:8px; border-radius:10px; background:#fff;"><strong>💰 1인분 예상비용 ${escapeHtml(insight.cost)}</strong><div style="margin-top:2px; color:var(--color-gray);">${escapeHtml(insight.costBasis)}</div></div>
-      <div style="margin-top:8px;"><strong>🧊 권장 보관기간</strong><ul style="margin:4px 0 0; padding-left:18px;">${insight.storage.map(([name, period]) => `<li><b>${escapeHtml(name)}</b>: ${escapeHtml(period)}</li>`).join('')}</ul></div>
-      <p style="margin:8px 0 0; font-size:10px; color:var(--color-gray);">${escapeHtml(insight.note)}</p>
-    `;
-  } else {
-    panel.innerHTML = `
-      <strong style="display:block; color:var(--color-orange-deep);">🤖 AI 판단 정보</strong>
-      <p style="margin:4px 0 8px;">공개 보관 가이드와 재료 구성을 참고해 보관기간과 조리 비용을 정리해 드려요.</p>
-      <button type="button" class="btn btn-secondary btn-sm" data-recipe-insight-start style="width:100%;">보관·비용 분석하기</button>
-    `;
-  }
-
-  if (!existing) leftPage.appendChild(panel);
-}
-
-function startRecipeInsight(recipe, detailContainer) {
-  const insight = getRecipeInsight(recipe);
-  if (!insight || (recipeInsightState.recipeId === recipe.id && recipeInsightState.status === 'loading')) return;
-
-  recipeInsightState.recipeId = recipe.id;
-  recipeInsightState.status = 'loading';
-  renderRecipeInsightPanel(detailContainer.querySelector('.notebook-left-page'), recipe);
-
-  window.setTimeout(() => {
-    if (state.route !== 'detail' || state.currentDetail !== recipe.id) return;
-    recipeInsightState.status = 'ready';
-    renderRecipeInsightPanel(detailContainer.querySelector('.notebook-left-page'), recipe);
-  }, 1100);
-}
-
 export function decorateDetailPage() {
   if (state.route !== 'detail') return;
   const aiReason = document.querySelector('.notebook-ai-reason');
   const detailContainer = document.querySelector('.detail-container');
   if (!detailContainer) return;
 
-  const detailTitle = detailContainer.querySelector('.notebook-recipe-title');
-  if (detailTitle) {
-    const displayedName = detailTitle.textContent.trim();
-    if (displayedName === '덮밥' || displayedName === '돼지고기덮밥' || displayedName === '돼지고기 덮밥') {
-      detailTitle.textContent = '돼지고기 덮밥';
-    }
-  }
-
-  const recipe = state.carouselRecipes?.find((item) => item.id === state.currentDetail)
-    || [...RECIPES, ...ALTERNATIVE_RECIPES].find((item) => item.id === state.currentDetail);
+  const recipe = [...RECIPES, ...ALTERNATIVE_RECIPES].find((item) => item.id === state.currentDetail);
   if (!recipe) return;
 
-  if (detailTitle) detailTitle.textContent = getRecipeName(recipe);
-
   document.querySelectorAll('.notebook-notepad .notepad-title').forEach((title) => {
-    if (title.textContent.includes('요리 순서') || title.textContent.includes('주방 순서')) title.textContent = '🍳 조리방법';
+    if (title.textContent.includes('주방 순서')) title.textContent = '🍳 조리방법';
   });
-  document.querySelectorAll('.tips-title').forEach((title) => {
-    if (title.textContent.includes('대체 재료 팁')) title.textContent = '💡 대체 재료 팁';
-  });
-  decorateSubstituteTips(detailContainer, recipe);
 
   const leftPage = detailContainer.querySelector('.notebook-left-page');
   if (leftPage && !leftPage.querySelector('[data-extra-ingredients]')) {
@@ -805,21 +854,16 @@ export function decorateDetailPage() {
     if (meta) meta.insertAdjacentElement('afterend', extraIngredients);
     else leftPage.appendChild(extraIngredients);
   }
-
-  renderRecipeInsightPanel(leftPage, recipe);
+  renderReceiptInsight(recipe, leftPage);
 
   // 좌측의 감성적인 AI 설명은 제거하고, 구체적인 조리방법은 우측 순서 영역에 넣습니다.
   if (aiReason) aiReason.remove();
   const stepsList = detailContainer.querySelector('.notepad-steps');
   if (stepsList && !stepsList.dataset.detailedCookingMethod) {
     stepsList.dataset.detailedCookingMethod = 'true';
-    const rawMethodSteps = getCookingMethod(recipe)
+    const methodSteps = getCookingMethod(recipe)
       .split(/(?<=\.)\s+/)
       .filter(Boolean);
-    const methodSteps = rawMethodSteps.slice(0, 3);
-    while (methodSteps.length < 3) {
-      methodSteps.push('재료가 고르게 익고 수분이 알맞게 줄어들 때까지 약불에서 한 번 더 정리합니다.');
-    }
     stepsList.innerHTML = methodSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join('');
     const seasoningStep = document.createElement('li');
     seasoningStep.innerHTML = `<strong>간 맞춤:</strong> ${escapeHtml(getSeasoningTip(recipe))}`;
@@ -828,93 +872,93 @@ export function decorateDetailPage() {
 
 }
 
-function normalizeMypageRecipeNames() {
-  document.querySelectorAll('.book-card-name').forEach((nameElement) => {
-    const name = nameElement.textContent.trim();
-    if (name === '덮밥' || name === '돼지고기덮밥' || name === '돼지고기 덮밥') {
-      nameElement.textContent = '돼지고기 덮밥';
-    }
-  });
-}
-
 function resetRecommendationFiltersForMenu() {
   selectedPreferences.clear();
   selectedCuisines.clear();
   recipeSearchQuery = '';
   activeDifficultyFilter = 'all';
   recipePage = 1;
-  state.recipeCardDisplayMode = 'one';
-  state.currentCarouselIndex = 0;
-
-  // 다음 취향 추천을 열었을 때 이전에 눌렀던 칩이 다시 선택된 것처럼 남지 않게 합니다.
+  state.showingAlternatives = false;
+  state.recipeSource = 'all';
   document.querySelectorAll('#taste-modal .chip-btn.active').forEach((chip) => {
     chip.classList.remove('active');
     chip.setAttribute('aria-pressed', 'false');
   });
 }
 
-function syncRenderedView() {
-  if (state.route === 'recipes') {
-    if (state.recipeViewMode === 'menu' && lastRecipeViewMode !== 'menu') {
-      resetRecommendationFiltersForMenu();
-      lastRecipeViewMode = 'menu';
-      render();
-      return;
-    }
-
-    lastRecipeViewMode = state.recipeViewMode;
-    if (state.recipeViewMode === 'menu'
-      && !document.getElementById('app')?.querySelector('[data-recipe-overview]')) {
-      applyRecipeFilters();
-      decorateRecipeCard();
-    } else if (state.recipeViewMode !== 'menu') {
-      decorateCarouselView();
-    }
-    return;
-  }
-  if (state.route === 'detail') decorateDetailPage();
-  if (state.route === 'mypage') normalizeMypageRecipeNames();
-}
-
 export function initRecommend() {
   addCuisineChoices();
-  lastRecipeViewMode = state.recipeViewMode;
+  startReceiptMemoryObserver();
 
   document.addEventListener('click', (event) => {
-    queueMicrotask(() => syncRenderedView());
-    // 다른 모듈의 상세 화면 렌더가 끝난 뒤에도 제목 보정을 한 번 더 적용합니다.
-    setTimeout(() => syncRenderedView(), 0);
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
 
-    const recipesNavigation = event.target.closest('[data-nav="recipes"]');
+    if (target.closest('[data-receipt-history-open]')) {
+      openReceiptLibrary();
+      return;
+    }
+
+    if (target.closest('[data-receipt-history-clear]')) {
+      if (!window.confirm('저장된 영수증과 연결된 분석 내역을 모두 삭제할까요?')) return;
+      clearStoredReceiptImages().then(() => {
+        writeReceiptAnalyses([]);
+        writeReceiptMemory({ items: [] });
+        refreshReceiptInsights();
+        listStoredReceiptImages().then((items) => renderReceiptLibrary(items));
+        showToast('저장된 영수증을 모두 삭제했어요.');
+      });
+      return;
+    }
+
+    if (target.closest('[data-receipt-history-close]') || target.matches('[data-receipt-history-library]')) {
+      closeReceiptLibrary();
+      return;
+    }
+
+    const receiptItemDelete = target.closest('[data-receipt-item-delete]');
+    if (receiptItemDelete) {
+      deleteReceiptAnalysisItem(receiptItemDelete.dataset.receiptItemDelete);
+      receiptItemDelete.closest('li')?.remove();
+      showToast('다 먹은 영수증 식재료를 삭제했어요.');
+      return;
+    }
+
+    const historyPreview = target.closest('[data-receipt-history-preview]');
+    if (historyPreview) {
+      listStoredReceiptImages().then((items) => renderReceiptLibrary(items, historyPreview.dataset.receiptHistoryPreview));
+      return;
+    }
+
+    const historySelect = target.closest('[data-receipt-history-select]');
+    if (historySelect) {
+      selectStoredReceiptImage(historySelect.dataset.receiptHistorySelect);
+      return;
+    }
+
+    const historyDelete = target.closest('[data-receipt-history-delete]');
+    if (historyDelete) {
+      const imageId = historyDelete.dataset.receiptHistoryDelete;
+      deleteStoredReceiptImage(imageId).then(() => {
+        deleteReceiptAnalysisForImage(imageId);
+        listStoredReceiptImages().then((items) => renderReceiptLibrary(items));
+        showToast('기억한 영수증을 삭제했어요.');
+      });
+      return;
+    }
+
+    if (target.closest('#btn-receipt-upload, #btn-receipt-choose, #btn-receipt-reselect')) {
+      receiptAttachedAt = new Date().toISOString();
+      queueMicrotask(ensureReceiptHistoryPanel);
+    }
+    if (target.closest('#btn-receipt-analyze')) {
+      captureReceiptResult();
+    }
+
+    const recipesNavigation = target.closest('[data-nav="recipes"]');
     if (recipesNavigation) {
       resetRecommendationFiltersForMenu();
-      lastRecipeViewMode = null;
-    }
-
-    const recipeDisplayButton = event.target.closest('[data-recipe-display]');
-    if (recipeDisplayButton) {
-      state.recipeCardDisplayMode = recipeDisplayButton.dataset.recipeDisplay;
-      if (state.recipeCardDisplayMode === 'three') {
-        state.currentCarouselIndex = Math.floor(state.currentCarouselIndex / 3) * 3;
-      }
-      state.preserveRecipeResults = true;
-      render();
-      decorateCarouselView();
-      return;
-    }
-
-    const recipeInsightButton = event.target.closest('[data-recipe-insight-start]');
-    if (recipeInsightButton && state.route === 'detail') {
-      const recipe = state.carouselRecipes?.find((item) => item.id === state.currentDetail)
-        || [...RECIPES, ...ALTERNATIVE_RECIPES].find((item) => item.id === state.currentDetail);
-      const detailContainer = recipeInsightButton.closest('.detail-container');
-      if (recipe && detailContainer) startRecipeInsight(recipe, detailContainer);
-      return;
-    }
-
-    const multiViewDetailButton = event.target.closest('.recipe-detail-btn[data-rid]');
-    if (multiViewDetailButton && multiViewDetailButton.id !== 'btn-view-steps') {
-      navigate('detail', multiViewDetailButton.dataset.rid);
+      refreshRecipeResults();
       return;
     }
 
@@ -931,6 +975,8 @@ export function initRecommend() {
       return;
     }
 
+    // 💥 중복/비동기 버그를 일으키던 queueMicrotask(syncRenderedView)와 data-nav="recipes" 수동 렌더 트리거 소거
+    
     // 이스터에그: 토끼 요리사 클릭 시 음식 폭죽 팡 터짐!
     const bunny = event.target.closest('.home-hero-img');
     if (bunny) {
@@ -964,12 +1010,8 @@ export function initRecommend() {
         }
         rememberTasteChoices();
         state.recipeViewMode = 'carousel';
-        state.recipeCardDisplayMode = 'one';
-        state.currentCarouselIndex = 0;
-      }
-      navigate('recipes');
-      if (tasteSuggest) {
-        // navigate()가 기본 추천 목록을 다시 계산하므로 취향/부족 재료를 재적용합니다.
+        state.currentCarouselIndex = 0; // 새 추천 시 인덱스를 항상 0으로 리셋
+        navigate('recipes');
         applyRecipeFilters();
         render();
       }
@@ -1044,7 +1086,22 @@ export function initRecommend() {
       return;
     }
 
+    // 💥 app.js와 100% 중복되던 캐러셀 슬라이더(prev, next, dot) 핸들러 제거
   });
+
+  document.addEventListener('change', (event) => {
+    if (!event.target.matches('#receipt-file-input')) return;
+    const file = event.target.files?.[0];
+    if (file && !suppressNextReceiptImageSave) {
+      saveReceiptImage(file).then((record) => {
+        if (record) activeReceiptImageId = record.id;
+        refreshReceiptHistoryPanel();
+      });
+    }
+    suppressNextReceiptImageSave = false;
+    queueMicrotask(ensureReceiptHistoryPanel);
+  });
+
   document.addEventListener('input', (event) => {
     const searchInput = event.target.closest('[data-recipe-search]');
     if (!searchInput) return;
