@@ -47,7 +47,7 @@ function normalizeText(value) {
   return String(value || "")
     .normalize("NFKC")
     .toLowerCase()
-    .replace(/[^0-9a-z가-힣]/g, "");
+    .replace(/[^\p{L}\p{N}]/gu, "");
 }
 
 function escapeHtml(value) {
@@ -68,10 +68,20 @@ const ingredientAliasIndex = [...ingredientAliases.entries()].sort(
 );
 
 function findMatchingIngredient(...names) {
-  const ingredientIndex = INGREDIENTS.map((ingredient) => ({
-    ...ingredient,
-    normalizedName: normalizeText(ingredient.name),
-  })).sort((a, b) => b.normalizedName.length - a.normalizedName.length);
+  let customIngredients = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem("customIngredients") || "[]");
+    customIngredients = Array.isArray(saved) ? saved : [];
+  } catch {
+    customIngredients = [];
+  }
+  const ingredientIndex = [...INGREDIENTS, ...customIngredients]
+    .filter((ingredient, index, all) => all.findIndex((item) => item.id === ingredient.id) === index)
+    .map((ingredient) => ({
+      ...ingredient,
+      normalizedName: normalizeText(ingredient.name),
+    }))
+    .sort((a, b) => b.normalizedName.length - a.normalizedName.length);
 
   for (const name of names) {
     const normalizedName = normalizeText(name);

@@ -45,6 +45,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // 이미지를 base64로 인코딩
+    const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedMimeTypes.has(receiptFile.type)) {
+      return jsonResponse({ error: "JPG, PNG, WEBP 이미지만 업로드할 수 있습니다." }, 400);
+    }
+    if (receiptFile.size <= 0) {
+      return jsonResponse({ error: "빈 이미지 파일은 분석할 수 없습니다." }, 400);
+    }
+
     const arrayBuffer = await receiptFile.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     let binary = "";

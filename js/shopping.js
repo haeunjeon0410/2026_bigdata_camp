@@ -75,7 +75,11 @@ export function getShoppingItems() {
 
 export function saveShoppingItems(items) {
   const normalizedItems = normalizeShoppingItems(items);
-  localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(normalizedItems));
+  try {
+    localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(normalizedItems));
+  } catch {
+    // The current UI can still use the normalized value for this session.
+  }
   return normalizedItems;
 }
 

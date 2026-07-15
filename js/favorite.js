@@ -20,7 +20,11 @@ export function getFavoriteAddedAtMap() {
 
 export function saveFavoriteAddedAtMap(map) {
   const safeMap = map && typeof map === 'object' && !Array.isArray(map) ? map : {};
-  localStorage.setItem(FAVORITE_ADDED_AT_KEY, JSON.stringify(safeMap));
+  try {
+    localStorage.setItem(FAVORITE_ADDED_AT_KEY, JSON.stringify(safeMap));
+  } catch {
+    // Keep favorites usable in memory when storage is blocked or full.
+  }
   return safeMap;
 }
 

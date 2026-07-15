@@ -369,8 +369,20 @@ export function registerIngredient(name) {
     emoji: ingredientEmoji[cleanName] || "🥕",
     category,
     storage,
+    isCustom: true,
   };
   INGREDIENTS.push(ingredient);
+  // Persist receipt-discovered ingredients alongside manually added ones.
+  try {
+    const saved = JSON.parse(localStorage.getItem("customIngredients") || "[]");
+    const customIngredients = Array.isArray(saved) ? saved : [];
+    if (!customIngredients.some((item) => item?.id === ingredient.id)) {
+      customIngredients.push(ingredient);
+      localStorage.setItem("customIngredients", JSON.stringify(customIngredients));
+    }
+  } catch {
+    // Storage may be unavailable; the in-memory value remains usable.
+  }
   return ingredient;
 }
 
