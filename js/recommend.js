@@ -5,6 +5,7 @@
 /* 추천 기능 모듈 */
 
 import { state, showToast, render, navigate, updateCarouselRecipes } from './app.js';
+import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
 
 // 추천 화면에서만 사용하는 취향 상태입니다. app.js의 state 구조는 변경하지 않습니다.
 const selectedPreferences = new Set();
@@ -15,6 +16,12 @@ let isSearchComposing = false;
 let searchRefreshTimer = null;
 let activeDifficultyFilter = 'all';
 let lastRecipeViewMode = null;
+
+export function hasActiveRecipeFilters() {
+  return selectedCuisines.size > 0
+    || activeDifficultyFilter !== 'all'
+    || Boolean(recipeSearchQuery.trim());
+}
 
 const cuisineKeywords = {
   한식: ['김치', '비빔', '찌개', '국', '탕', '불고기', '잡채', '김밥', '된장', '감자볶음', '계란말이', '볶음', '반찬'],
@@ -33,7 +40,10 @@ const cuisineOverrides = {
   계란국: '한식',
   덮밥: '한식',
   돼지고기덮밥: '한식',
-  '돼지고기 덮밥': '한식'
+  '돼지고기 덮밥': '한식',
+  짜장면: '중식',
+  짬뽕: '중식',
+  탕수육: '중식'
 };
 
 const seasoningTips = {
@@ -41,6 +51,9 @@ const seasoningTips = {
   볶음밥: '밥 1공기 기준 진간장 1큰술을 팬 가장자리에 둘러 향을 내고, 볶은 뒤 싱거우면 소금 1꼬집씩 추가합니다. 굴소스를 사용할 때는 1/2큰술만 넣고 간장은 1/2큰술로 줄이세요.',
   오므라이스: '볶음밥에는 케첩 2큰술과 소금 1/4작은술을 넣고, 계란물에는 소금 1꼬집만 넣습니다. 완성 후 싱거우면 케첩 1작은술을 곁들이고 소금을 추가하지 마세요.',
   덮밥: '돼지고기 150g 기준 진간장 1큰술·굴소스 1/2큰술·설탕 1/2큰술을 먼저 졸입니다. 소스가 반으로 줄어든 뒤 맛을 보고 싱거울 때만 진간장 1/2작은술씩 보충하세요.',
+  짜장면: '춘장 2큰술·설탕 1작은술·진간장 1/2큰술을 기준으로 합니다. 돼지고기와 양파에서 수분이 나오므로 소스가 걸쭉해진 뒤 맛을 보고, 싱거울 때만 춘장 1/2작은술씩 추가하세요.',
+  짬뽕: '물 500ml 기준 진간장 1큰술·소금 1/3작은술로 시작합니다. 채소와 고춧가루의 염도 차이가 있으니 5분 끓인 뒤 맛을 보고, 싱거울 때만 소금 1꼬집씩 추가하세요.',
+  탕수육: '소스는 물 150ml·식초 3큰술·설탕 3큰술·진간장 1큰술 비율로 끓입니다. 끓인 뒤 싱거우면 간장 1/2작은술, 시면 설탕 1/2작은술을 추가하고 전분물은 1큰술씩 넣어 농도를 맞추세요.',
   카레라이스: '물 400ml와 카레가루 3큰술을 5분 끓인 뒤 맛을 봅니다. 싱거우면 소금 1/4작은술, 단맛이 부족하면 설탕 1/2작은술을 넣고 1분 더 끓이세요.',
   비빔면: '1인분 양념은 고추장 2큰술·식초 1/2큰술·설탕 1/2큰술·간장 1/2큰술·참기름 1작은술입니다. 면을 비빈 뒤 싱거울 때 고추장 1/2큰술보다 간장 1/2작은술씩 추가하세요.',
   '알리오 올리오': '면수는 물 1L에 소금 1큰술을 넣어 준비하고, 면과 면수 3큰술을 섞습니다. 완성 후 싱거우면 소금 1꼬집씩, 느끼하면 레몬즙 1작은술을 넣어 조절하세요.',
@@ -67,6 +80,9 @@ const cookingMethods = {
   볶음밥: '밥 1공기와 다진 채소를 준비하고, 팬에 식용유 1큰술을 둘러 중불로 달굽니다. 채소를 2분 볶은 뒤 계란 1개를 넣어 잘게 풀고, 밥을 넣어 덩어리를 눌러가며 볶습니다. 팬 가장자리에 진간장 1큰술을 둘러 향을 낸 뒤 섞고, 부족하면 소금 1~2꼬집으로 마무리합니다.',
   오므라이스: '양파 1/4개를 잘게 다져 식용유에 2분 볶고 밥 1공기·케첩 2큰술·소금 1/4작은술을 넣어 3분 더 볶습니다. 계란 2개에 소금 1꼬집을 풀어 약불 팬에 얇게 익힌 뒤, 가운데에 볶음밥을 올리고 양옆을 접어 감쌉니다.',
   덮밥: '돼지고기 150g과 양파 1/2개를 먹기 좋은 크기로 썹니다. 팬에 돼지고기를 중불로 4분 볶아 익힌 뒤 양파를 넣고 2분 더 볶습니다. 진간장 1큰술·굴소스 1/2큰술·설탕 1/2큰술·물 3큰술을 섞어 넣고 3분간 자작하게 졸여 밥 1공기 위에 올립니다.',
+  짜장면: '돼지고기 120g과 양파 1/2개를 잘게 썰어 식용유 2큰술에 중불로 3분 볶습니다. 불을 약하게 줄여 춘장 2큰술·설탕 1작은술·진간장 1/2큰술을 넣고 2분 볶아 기름에 춘장 향을 낸 뒤 물 250ml를 부어 5분 끓입니다. 전분가루 1큰술과 물 2큰술을 섞어 넣어 30초 걸쭉하게 만든 뒤 삶은 면 1인분 위에 소스를 올립니다.',
+  짬뽕: '돼지고기 100g과 대파 1/2대를 식용유 1큰술에 중불로 2분 볶아 향을 냅니다. 양파 1/2개·양배추 1컵을 센 불에서 2분 볶고 고춧가루 1큰술·진간장 1큰술을 넣어 30초 더 볶은 뒤 물 500ml를 붓습니다. 소금 1/3작은술로 간하고 5분 끓인 국물에 삶은 면 1인분을 넣어 1분 데웁니다.',
+  탕수육: '돼지고기 200g을 길쭉하게 썰어 소금 1/4작은술·후추 2꼬집으로 밑간하고, 전분가루 1컵과 물 3/4컵을 섞어 20분 두었다가 윗물을 따라냅니다. 고기에 전분 반죽을 묻혀 170℃ 기름에서 3분 튀긴 뒤 건져 1분 식히고, 180℃에서 1분 더 튀겨 바삭하게 만듭니다. 물 150ml·식초 3큰술·설탕 3큰술·진간장 1큰술을 끓인 뒤 전분물 1큰술을 넣어 농도를 맞추고 튀긴 고기에 곁들입니다.',
   카레라이스: '감자 1개·당근 1/3개·양파 1/2개를 한입 크기로 썰어 식용유 1큰술에 양파부터 2분 볶습니다. 감자와 당근을 넣고 3분 더 볶은 뒤 물 400ml를 부어 10분 끓입니다. 불을 약하게 줄여 카레가루 3큰술을 풀고 5분 더 저어 끓인 뒤 밥에 붓습니다.',
   비빔면: '고추장 2큰술·식초 1/2큰술·설탕 1/2큰술·간장 1/2큰술·참기름 1작은술을 그릇에 넣고 설탕이 녹을 때까지 섞습니다. 국수 1인분을 삶아 찬물에 2~3번 헹군 뒤 물기를 충분히 뺍니다. 양념장 2/3를 먼저 넣어 버무리고 맛을 보며 나머지를 추가합니다.',
   '알리오 올리오': '스파게티면 100g을 소금 1큰술을 넣은 끓는 물에 포장 시간보다 1분 짧게 삶고 면수 3큰술을 남깁니다. 팬에 올리브유 3큰술과 편 썬 마늘 4쪽을 넣어 약불에서 3분 볶습니다. 면과 면수를 넣어 1분간 섞어 소스를 입힌 뒤 소금 1꼬집과 후추로 맞춥니다.',
@@ -141,6 +157,32 @@ function getSeasoningTip(recipe) {
     || '재료에서 나오는 염도를 먼저 확인하고, 조리가 끝나기 직전에 한 꼬집씩 보충해 가장 알맞은 간을 맞추세요.';
 }
 
+function decorateSubstituteTips(detailContainer, recipe) {
+  const tips = Array.isArray(recipe?.substituteTips) ? recipe.substituteTips : [];
+  const tipsList = detailContainer.querySelector('.substitute-tips .tips-list');
+  if (!tipsList || !tips.length) return;
+
+  tipsList.innerHTML = tips.map((tip) => {
+    const original = String(tip?.original || '').trim();
+    const alternatives = (Array.isArray(tip?.alternatives) ? tip.alternatives : [tip?.alternatives])
+      .filter(Boolean)
+      .map((item) => String(item).trim())
+      .filter(Boolean);
+    const note = String(tip?.note || '')
+      .replace(/\band\b/gi, '그리고')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!original || !alternatives.length) return '';
+
+    return `
+      <li>
+        <strong>${escapeHtml(original)}</strong> 재료가 없을 때는 ${escapeHtml(alternatives.join(' 또는 '))}를 사용해 보세요.
+        ${note ? `<span>${escapeHtml(note)}</span>` : ''}
+      </li>
+    `;
+  }).join('');
+}
+
 function getRecipeName(recipe) {
   return getCanonicalRecipeName(recipe) === '덮밥' ? '돼지고기 덮밥' : recipe?.name;
 }
@@ -148,6 +190,7 @@ function getRecipeName(recipe) {
 function classifyCuisine(recipe) {
   const recipeName = String(recipe?.name || '').trim();
   if (cuisineOverrides[recipeName]) return cuisineOverrides[recipeName];
+  if (String(recipe?.id || '').startsWith('alt')) return '편의점';
   const text = [recipe.name, recipe.category, ...(recipe.ingredients || [])].join(' ');
   const matched = Object.entries(cuisineKeywords)
     .map(([cuisine, keywords]) => ({
@@ -202,9 +245,12 @@ function isFilterPreference(label) {
 }
 
 export function applyRecipeFilters() {
-  if (!Array.isArray(state.carouselRecipes)) return;
+  const sourceRecipes = Array.isArray(state.recipePool) && state.recipePool.length > 0
+    ? state.recipePool
+    : state.carouselRecipes;
+  if (!Array.isArray(sourceRecipes)) return;
 
-  const recipes = state.carouselRecipes.map((recipe) => {
+  const recipes = sourceRecipes.map((recipe) => {
     const preferenceScore = [...selectedPreferences].reduce((score, label) => {
       const rule = getPreferenceRule(label);
       return score + (rule && rule.test(recipe) ? 1 : 0);
@@ -252,14 +298,18 @@ export function applyRecipeFilters() {
     : filteredRecipes;
 
   searchedRecipes.sort((a, b) =>
-    b.preferenceScore - a.preferenceScore ||
     b.rate - a.rate ||
+    b.preferenceScore - a.preferenceScore ||
     (a.missing?.length || 0) - (b.missing?.length || 0) ||
     getMinutes(a) - getMinutes(b)
   );
 
-  state.carouselRecipes = searchedRecipes;
-  if (state.currentCarouselIndex >= searchedRecipes.length) state.currentCarouselIndex = 0;
+  // 메뉴는 전체 필터 결과를 사용하고, 캐러셀만 매칭율 상위 10개로 제한합니다.
+  state.carouselRecipes = state.recipeViewMode === 'menu'
+    ? searchedRecipes
+    : searchedRecipes.slice(0, 10);
+  const visibleRecipes = state.carouselRecipes;
+  if (state.currentCarouselIndex >= visibleRecipes.length) state.currentCarouselIndex = 0;
 }
 
 function addCuisineChoices() {
@@ -301,7 +351,7 @@ export function decorateRecipeCard() {
     toolbar.style.cssText = 'margin:0 auto 18px; max-width:760px; padding:14px; border:2px solid var(--color-charcoal); border-radius:var(--br-lg); background:var(--color-cream); box-shadow:0 4px 0 var(--color-charcoal);';
     toolbar.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px;">
-        ${['all', '한식', '중식', '일식', '양식'].map((cuisine) => `
+        ${['all', '한식', '중식', '일식', '양식', '편의점'].map((cuisine) => `
           <button type="button" class="chip-btn ${cuisine === 'all' && selectedCuisines.size === 0 ? 'active' : ''}" data-cuisine-filter="${cuisine}">
             ${cuisine === 'all' ? '전체' : cuisine}
           </button>
@@ -339,6 +389,8 @@ export function decorateRecipeCard() {
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', String(isActive));
   });
+
+  if (!state.carouselRecipes.length) return;
 
   if (recipesContainer) {
     const carousel = recipesContainer.querySelector('.carousel-wrapper');
@@ -509,6 +561,10 @@ function decorateCarouselView() {
 
   const track = carousel.querySelector('.carousel-track');
   if (!track) return;
+  carousel.querySelectorAll('#btn-carousel-prev, #btn-carousel-next').forEach((button) => {
+    button.style.zIndex = '20';
+    button.style.pointerEvents = 'auto';
+  });
   if (displayMode === 'three' && state.carouselRecipes.length > 1) {
     const recipes = state.carouselRecipes;
     const pageSize = 3;
@@ -545,6 +601,58 @@ function decorateCarouselView() {
     const dislikeButton = carousel.querySelector('#btn-dislike-recipe');
     if (dislikeButton) dislikeButton.style.right = '';
   }
+
+  bindCarouselNavigation(carousel);
+}
+
+function moveCarousel(offset) {
+  const recipes = state.carouselRecipes;
+  if (!recipes.length) return;
+
+  const pageSize = state.recipeCardDisplayMode === 'three' ? 3 : 1;
+  if (pageSize === 1) {
+    state.currentCarouselIndex = (state.currentCarouselIndex + offset + recipes.length) % recipes.length;
+  } else {
+    const pageCount = Math.ceil(recipes.length / pageSize);
+    const currentPage = Math.floor(state.currentCarouselIndex / pageSize);
+    state.currentCarouselIndex = ((currentPage + offset + pageCount) % pageCount) * pageSize;
+  }
+  state.carouselDirection = offset > 0 ? 'right' : 'left';
+  // 편의점 레시피는 applyRecipeFilters()가 실행될 때마다 인덱스를 0으로
+  // 초기화하므로, 카드 이동 중에는 현재 결과 목록을 그대로 유지합니다.
+  state.preserveRecipeResults = true;
+  render();
+  decorateCarouselView();
+}
+
+function bindCarouselNavigation(carousel) {
+  const previous = carousel.querySelector('#btn-carousel-prev');
+  const next = carousel.querySelector('#btn-carousel-next');
+  if (previous) {
+    previous.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      moveCarousel(-1);
+    };
+  }
+  if (next) {
+    next.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      moveCarousel(1);
+    };
+  }
+
+  carousel.querySelectorAll('.carousel-dot').forEach((dot) => {
+    dot.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      state.currentCarouselIndex = Number(dot.dataset.index) || 0;
+      state.preserveRecipeResults = true;
+      render();
+      decorateCarouselView();
+    };
+  });
 }
 
 function escapeHtml(value) {
@@ -580,7 +688,7 @@ function scheduleRecipeSearch(searchInput) {
   }, 180);
 }
 
-function decorateDetailPage() {
+export function decorateDetailPage() {
   if (state.route !== 'detail') return;
   const aiReason = document.querySelector('.notebook-ai-reason');
   const detailContainer = document.querySelector('.detail-container');
@@ -594,7 +702,8 @@ function decorateDetailPage() {
     }
   }
 
-  const recipe = state.carouselRecipes?.find((item) => item.id === state.currentDetail);
+  const recipe = state.carouselRecipes?.find((item) => item.id === state.currentDetail)
+    || [...RECIPES, ...ALTERNATIVE_RECIPES].find((item) => item.id === state.currentDetail);
   if (!recipe) return;
 
   if (detailTitle) detailTitle.textContent = getRecipeName(recipe);
@@ -602,6 +711,10 @@ function decorateDetailPage() {
   document.querySelectorAll('.notebook-notepad .notepad-title').forEach((title) => {
     if (title.textContent.includes('요리 순서') || title.textContent.includes('주방 순서')) title.textContent = '🍳 조리방법';
   });
+  document.querySelectorAll('.tips-title').forEach((title) => {
+    if (title.textContent.includes('대체 재료 팁')) title.textContent = '💡 대체 재료 팁';
+  });
+  decorateSubstituteTips(detailContainer, recipe);
 
   const leftPage = detailContainer.querySelector('.notebook-left-page');
   if (leftPage && !leftPage.querySelector('[data-extra-ingredients]')) {
@@ -702,34 +815,6 @@ export function initRecommend() {
   addCuisineChoices();
   lastRecipeViewMode = state.recipeViewMode;
 
-  // app.js의 기본 캐러셀 핸들러보다 먼저 3개 단위 페이지 이동을 처리합니다.
-  document.addEventListener('click', (event) => {
-    if (state.recipeViewMode !== 'carousel' || state.recipeCardDisplayMode !== 'three') return;
-
-    const length = state.carouselRecipes.length;
-    const pageSize = 3;
-    const carouselButton = event.target.closest('#btn-carousel-prev, #btn-carousel-next');
-    const carouselDot = event.target.closest('.carousel-dot');
-    if ((!carouselButton && !carouselDot) || length === 0) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (carouselButton) {
-      const pageCount = Math.ceil(length / pageSize);
-      const currentPage = Math.floor(state.currentCarouselIndex / pageSize);
-      const offset = carouselButton.id === 'btn-carousel-prev' ? -1 : 1;
-      const nextPage = (currentPage + offset + pageCount) % pageCount;
-      state.currentCarouselIndex = nextPage * pageSize;
-      state.carouselDirection = offset > 0 ? 'right' : 'left';
-    } else {
-      state.currentCarouselIndex = Number(carouselDot.dataset.index) || 0;
-    }
-
-    render();
-    decorateCarouselView();
-  }, true);
-
   document.addEventListener('click', (event) => {
     queueMicrotask(() => syncRenderedView());
     // 다른 모듈의 상세 화면 렌더가 끝난 뒤에도 제목 보정을 한 번 더 적용합니다.
@@ -747,6 +832,7 @@ export function initRecommend() {
       if (state.recipeCardDisplayMode === 'three') {
         state.currentCarouselIndex = Math.floor(state.currentCarouselIndex / 3) * 3;
       }
+      state.preserveRecipeResults = true;
       render();
       decorateCarouselView();
       return;
@@ -758,32 +844,17 @@ export function initRecommend() {
       return;
     }
 
-    if (state.recipeViewMode === 'carousel' && state.recipeCardDisplayMode === 'three') {
-      const length = state.carouselRecipes.length;
-      const pageSize = 3;
-      const carouselButton = event.target.closest('#btn-carousel-prev, #btn-carousel-next');
-      const carouselDot = event.target.closest('.carousel-dot');
-
-      if (carouselButton && length > 0) {
-        const pageCount = Math.ceil(length / pageSize);
-        const currentPage = Math.floor(state.currentCarouselIndex / pageSize);
-        const offset = carouselButton.id === 'btn-carousel-prev' ? -1 : 1;
-        const nextPage = (currentPage + offset + pageCount) % pageCount;
-        state.currentCarouselIndex = nextPage * pageSize;
-        state.carouselDirection = offset > 0 ? 'right' : 'left';
-        render();
-        decorateCarouselView();
-        event.stopImmediatePropagation();
-        return;
-      }
-
-      if (carouselDot) {
-        state.currentCarouselIndex = Number(carouselDot.dataset.index) || 0;
-        render();
-        decorateCarouselView();
-        event.stopImmediatePropagation();
-        return;
-      }
+    const resetRecipeFilters = event.target.closest('#btn-reset-recipe-filters');
+    if (resetRecipeFilters) {
+      selectedPreferences.clear();
+      selectedCuisines.clear();
+      recipeSearchQuery = '';
+      activeDifficultyFilter = 'all';
+      state.showingAlternatives = false;
+      state.recipeSource = 'all';
+      state.recipeViewMode = 'menu';
+      refreshRecipeResults();
+      return;
     }
 
     // 이스터에그: 토끼 요리사 클릭 시 음식 폭죽 팡 터짐!
@@ -804,11 +875,19 @@ export function initRecommend() {
     const tasteClose = event.target.closest('.btn-taste-close');
     const tasteSuggest = event.target.closest('.btn-taste-suggest');
     if (tasteClose || tasteSuggest) {
-      const tasteModal = document.getElementById('taste-modal');
-      if (tasteModal) {
-        tasteModal.classList.remove('show');
-      }
-      if (tasteSuggest) {
+      if (tasteClose) {
+        // 1. 모달 내 활성화된 모든 칩 active 클래스 제거
+        document.querySelectorAll('#taste-modal .chip-btn').forEach((chip) => {
+          chip.classList.remove('active');
+        });
+        // 2. 필터 데이터 비우기
+        selectedPreferences.clear();
+        selectedCuisines.clear();
+      } else if (tasteSuggest) {
+        const tasteModal = document.getElementById('taste-modal');
+        if (tasteModal) {
+          tasteModal.classList.remove('show');
+        }
         rememberTasteChoices();
         state.recipeViewMode = 'carousel';
         state.recipeCardDisplayMode = 'one';
@@ -838,6 +917,12 @@ export function initRecommend() {
       const cuisine = cuisineFilter.dataset.cuisineFilter;
       selectedCuisines.clear();
       if (cuisine !== 'all') selectedCuisines.add(cuisine);
+      state.showingAlternatives = cuisine === '편의점';
+      state.recipeSource = cuisine === 'all'
+        ? 'all'
+        : cuisine === '편의점'
+          ? 'alternative'
+          : 'normal';
       refreshRecipeResults();
       return;
     }
@@ -853,16 +938,6 @@ export function initRecommend() {
     if (overviewRecipe) {
       state.detailBackRoute = 'recipes';
       navigate('detail', overviewRecipe.dataset.overviewRecipe);
-      return;
-    }
-
-    const detailNavigation = event.target.closest('[data-detail-nav]');
-    if (detailNavigation) {
-      const recipeId = detailNavigation.dataset.detailNav;
-      const recipeIndex = state.carouselRecipes.findIndex((recipe) => recipe.id === recipeId);
-      if (recipeIndex >= 0) state.currentCarouselIndex = recipeIndex;
-      state.detailBackRoute = 'recipes';
-      navigate('detail', recipeId);
       return;
     }
 
@@ -885,6 +960,7 @@ export function initRecommend() {
 
     if (event.target.closest('#btn-dislike-recipe')) {
       state.showingAlternatives = !state.showingAlternatives;
+      state.recipeSource = state.showingAlternatives ? 'alternative' : 'normal';
       state.recipeViewMode = 'carousel';
       window.__routingActive = true; // 편의점 레시피 전환 시 우아한 실크 페이드 유도
       refreshRecipeResults();
