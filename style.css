@@ -698,7 +698,7 @@ h4 {
 .fridge-cavity-interior {
   position: absolute;
   inset: 0;
-  padding: 10px 12px 80px 12px;
+  padding: 10px 12px 100px 12px;
   /* space for veggie drawer */
   display: flex;
   flex-direction: column;
@@ -771,7 +771,7 @@ h4 {
   left: 10px;
   right: 10px;
   bottom: 8px;
-  height: 70px;
+  height: 92px;
   background-color: #BDE4D2;
   border: var(--border-thin);
   border-radius: var(--br-sm);
@@ -798,10 +798,92 @@ h4 {
 }
 
 .drawer-items {
+  width: 100%;
+  min-height: 0;
   display: flex;
-  gap: 4px;
-  justify-content: center;
+  gap: 3px;
+  flex: 1;
   flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  padding: 6px 3px 3px;
+  overflow: hidden;
+}
+
+.drawer-items .ingredient-sticker {
+  flex: 0 0 auto;
+}
+
+.interactive-fridge .ingredient-density-compact .ingredient-sticker {
+  flex: 1 1 calc(25% - 3px);
+  max-width: 72px;
+  min-height: 26px;
+  padding: 3px 5px;
+}
+
+.interactive-fridge .ingredient-density-compact .sticker-emoji {
+  font-size: 12px;
+}
+
+.interactive-fridge .ingredient-density-compact .sticker-name {
+  font-size: 9px;
+}
+
+.interactive-fridge .ingredient-density-dense .ingredient-sticker {
+  flex: 1 1 calc(20% - 3px);
+  max-width: 60px;
+  min-height: 24px;
+  padding: 2px 4px;
+  gap: 2px;
+}
+
+.interactive-fridge .ingredient-density-dense .sticker-emoji {
+  font-size: 11px;
+}
+
+.interactive-fridge .ingredient-density-dense .sticker-name {
+  font-size: 8px;
+}
+
+.interactive-fridge .ingredient-density-ultra .ingredient-sticker {
+  flex: 1 1 calc(16.666% - 3px);
+  max-width: 52px;
+  min-height: 21px;
+  padding: 2px 3px;
+  gap: 1px;
+}
+
+.interactive-fridge .ingredient-density-ultra .sticker-emoji {
+  font-size: 9px;
+}
+
+.interactive-fridge .ingredient-density-ultra .sticker-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interactive-fridge .ingredient-density-compact .sticker-chk,
+.interactive-fridge .ingredient-density-dense .sticker-chk,
+.interactive-fridge .ingredient-density-ultra .sticker-chk {
+  top: -4px !important;
+  right: -3px !important;
+  width: 12px !important;
+  height: 12px !important;
+  font-size: 7px !important;
+}
+
+.interactive-fridge .ingredient-density-ultra .sticker-chk {
+  width: 10px !important;
+  height: 10px !important;
+  font-size: 6px !important;
+}
+
+.drawer-items .shelf-empty {
+  margin: auto;
 }
 
 /* Swing Refrigerator Door */
@@ -1054,13 +1136,60 @@ h4 {
 
 /* Dynamically rendered ingredient search/category results */
 .ingredient-search-results {
-  width: min(100%, 720px);
-  margin: 18px auto 0;
-  padding: 16px;
-  border: var(--border-thin);
-  border-radius: var(--br-md);
-  background: var(--color-cream-light);
-  box-shadow: 3px 3px 0 var(--color-charcoal);
+  position: absolute;
+  top: 4px;
+  right: -155px;
+  z-index: 12;
+  width: 330px;
+  margin: 0;
+  padding: 16px 12px 12px;
+  max-height: 235px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 3px solid var(--color-charcoal);
+  border-radius: 24px 18px 22px 16px;
+  background:
+    radial-gradient(rgba(120, 192, 168, 0.18) 1px, transparent 1px),
+    linear-gradient(145deg, #fffdf9, #f0faf6);
+  background-size: 14px 14px, 100% 100%;
+  box-shadow: 6px 7px 0 rgba(74, 62, 61, 0.18);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-mint) transparent;
+  scrollbar-gutter: stable;
+}
+
+.ingredient-search-results::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 66px;
+  height: 15px;
+  border: 1px solid rgba(190, 165, 94, 0.25);
+  background: rgba(255, 232, 153, 0.82);
+  box-shadow: 0 1px 2px rgba(74, 62, 61, 0.12);
+  transform: translateX(-50%) rotate(-2deg);
+  pointer-events: none;
+}
+
+.ingredient-search-results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.ingredient-search-results::-webkit-scrollbar-track {
+  margin: 18px 0 12px;
+  background: transparent;
+}
+
+.ingredient-search-results::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--color-mint);
+  background-clip: padding-box;
+}
+
+.ingredient-search-results::-webkit-scrollbar-button {
+  display: none;
 }
 
 .ingredient-search-results:empty {
@@ -1069,30 +1198,79 @@ h4 {
 
 .ingredient-search-results .search-results-title,
 .ingredient-search-results .category-results-title {
-  margin-bottom: 10px;
+  width: fit-content;
+  margin: 0;
+  padding: 3px 10px;
+  border: 2px solid var(--color-charcoal);
+  border-radius: 999px;
+  background: var(--color-mint);
+  box-shadow: 2px 3px 0 var(--color-charcoal);
   color: var(--color-charcoal);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-hand);
   font-size: 15px;
   font-weight: 800;
-  text-align: left;
+  line-height: 1.1;
+  transform: rotate(-1deg);
+}
+
+.ingredient-results-header {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ingredient-bulk-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.ingredient-bulk-actions button {
+  padding: 3px 6px;
+  border: 1px solid var(--color-charcoal);
+  border-radius: 999px;
+  background: var(--color-white);
+  box-shadow: 1px 1px 0 var(--color-charcoal);
+  color: var(--color-charcoal);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.ingredient-bulk-actions button:first-child {
+  background: var(--color-mint-light);
+  color: var(--color-mint-deep);
+}
+
+.ingredient-bulk-actions button:hover {
+  background: var(--color-orange-light);
+  transform: translateY(-1px);
 }
 
 .ingredient-candidate-list {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 8px;
 }
 
 /* Search results are outside .interactive-fridge, so share its sticker styling. */
 .ingredient-search-results .ingredient-sticker {
   position: relative;
+  width: 100%;
+  height: 34px;
+  min-width: 0;
   min-height: 34px;
-  padding: 6px 10px;
+  padding: 5px 7px;
   border: 1.5px solid var(--color-charcoal);
-  border-radius: var(--br-sm);
+  border-radius: 14px;
   background: var(--color-white);
-  box-shadow: 2px 2px 0 var(--color-charcoal);
+  box-shadow: 2px 3px 0 rgba(74, 62, 61, 0.65);
   color: var(--color-charcoal);
   display: inline-flex;
   align-items: center;
@@ -1105,43 +1283,54 @@ h4 {
 
 .ingredient-search-results .ingredient-sticker:hover {
   background: var(--color-mint-light);
-  transform: scale(1.06) rotate(0deg);
+  transform: translateY(-2px) rotate(0deg);
 }
 
 .ingredient-search-results .ingredient-sticker.selected {
-  background: #E8F8F2;
-  border-color: var(--color-mint);
-  box-shadow: 2px 2px 0 var(--color-mint-deep);
+  background: #dff3eb;
+  border-color: var(--color-mint-deep);
+  box-shadow: 2px 3px 0 var(--color-mint-deep);
 }
 
 .ingredient-search-results .sticker-emoji {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .ingredient-search-results .sticker-name {
-  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ingredient-search-results .sticker-chk {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 14px;
-  height: 14px;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
   border: 1.5px solid var(--color-charcoal);
   border-radius: 50%;
   background: var(--color-orange);
   color: var(--color-white);
   display: grid;
   place-items: center;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   box-shadow: 1px 1px 0 var(--color-charcoal);
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.custom-ingredient-add,
-.custom-ingredient-delete {
+.ingredient-search-results .ingredient-sticker.selected .sticker-chk {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.custom-ingredient-add {
   min-height: 34px;
   padding: 6px 12px;
   border: 1.5px solid var(--color-charcoal);
@@ -1149,22 +1338,12 @@ h4 {
   font-size: 12px;
   font-weight: 800;
   transition: transform 0.15s ease, background-color 0.15s ease;
-}
-
-.custom-ingredient-add {
   background: var(--color-orange);
   color: var(--color-white);
   box-shadow: 2px 2px 0 var(--color-orange-deep);
 }
 
-.custom-ingredient-delete {
-  background: var(--color-orange-light);
-  color: var(--color-orange-deep);
-  box-shadow: 1.5px 1.5px 0 var(--color-charcoal);
-}
-
-.custom-ingredient-add:hover,
-.custom-ingredient-delete:hover {
+.custom-ingredient-add:hover {
   transform: translateY(-1px);
 }
 
@@ -1173,6 +1352,19 @@ h4 {
   color: var(--color-gray);
   font-size: 13px;
   text-align: center;
+}
+
+.ingredient-search-results .empty-message p {
+  margin: 0;
+}
+
+.ingredient-search-results .empty-message p + p {
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.ingredient-search-results .empty-message .custom-ingredient-add {
+  margin-top: 10px;
 }
 
 /* Compact bottom actions bar for My Fridge */
@@ -3329,10 +3521,10 @@ h4 {
   }
   .fridge-hungry-bunny-wrap {
     position: absolute;
-    right: -100px; /* 우측으로 치우치던 것을 70px 좌측으로 바짝 당김! */
-    bottom: 20px;
+    right: -125px;
+    bottom: 16px;
     margin: 0;
-    width: 240px; /* 데스크톱 210px 거대 스펙 고정 */
+    width: 190px;
   }
   .hungry-bubble.show-bubble {
     margin-bottom: 6px;

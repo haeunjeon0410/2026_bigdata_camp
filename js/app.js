@@ -446,12 +446,14 @@ function renderFridge() {
   const activeCat = state.activeCategory;
   const isOpen = state.isFridgeOpen;
 
-  // Filter ingredients by search AND selected category tab
-  let filtered = INGREDIENTS.filter((item) => item.name.includes(state.search));
-  if (activeCat !== "all") {
-    filtered = filtered.filter((item) => item.category === activeCat);
-  }
-
+  // Filter by search and category, but keep already selected ingredients visible
+  // when moving between category pockets so their selection is not perceived as reset.
+  const filtered = INGREDIENTS.filter((item) => {
+    const matchesSearch = item.name.includes(state.search);
+    const matchesCategory =
+      activeCat === "all" || item.category === activeCat;
+    return (matchesSearch && matchesCategory) || state.selected.has(item.id);
+  });
   // Shelf group rendering helper
   function renderShelfItems(shelfItems) {
     if (shelfItems.length === 0) return "";
@@ -463,10 +465,11 @@ function renderFridge() {
         <div class="ingredient-sticker ${isSelected ? "selected" : ""}" 
              style="--tilt: ${tilt}deg" 
              data-ing="${ing.id}"
+             title="${ing.name}"
              id="ing-${ing.id}"
              role="checkbox"
              aria-checked="${isSelected}">
-          <span class="sticker-chk">✔</span>
+          <span class="sticker-chk" aria-hidden="true">×</span>
           <span class="sticker-emoji">${ing.emoji}</span>
           <span class="sticker-name">${ing.name}</span>
         </div>
@@ -475,30 +478,20 @@ function renderFridge() {
       .join("");
   }
 
-  // Split ingredients by fridge shelves/drawers naturally
-  const shelf1Items = filtered.filter((item) => item.category === "dairy");
-  const shelf2Items = filtered.filter(
-    (item) => item.category === "grain" || item.category === "meat",
-  );
-
-  // Shelf 3 & Drawer Split for veggies.
-  // Ingredient IDs are generated as i01, i02, ... in data.js, so use the
-  // stable display names here instead of outdated slug IDs.
-  const drawerNames = new Set(["양배추", "오이", "애호박"]);
-  const shelf3Items = filtered.filter(
-    (item) => item.category === "vegetable" && !drawerNames.has(item.name),
-  );
-  const drawerItems = filtered.filter((item) => drawerNames.has(item.name));
+  const shelf1Items = filtered.filter((item) => item.storage === "shelf-1");
+  const shelf2Items = filtered.filter((item) => item.storage === "shelf-2");
+  const shelf3Items = filtered.filter((item) => item.storage === "shelf-3");
+  const drawerItems = filtered.filter((item) => item.storage === "drawer");
 
   const s1Html =
     renderShelfItems(shelf1Items) ||
     '<span class="shelf-empty">🥛 비어있음</span>';
   const s2Html =
     renderShelfItems(shelf2Items) ||
-    '<span class="shelf-empty">🍞 비어있음</span>';
+    '<span class="shelf-empty">🍳 비어있음</span>';
   const s3Html =
     renderShelfItems(shelf3Items) ||
-    '<span class="shelf-empty">🥔 비어있음</span>';
+    '<span class="shelf-empty">🧂 비어있음</span>';
   const sDrawerHtml =
     renderShelfItems(drawerItems) ||
     '<span class="shelf-empty" style="font-size:10px;">비어있음</span>';
@@ -533,19 +526,19 @@ function renderFridge() {
                 
                 <!-- Shelf 1 -->
                 <div class="fridge-shelf-rack" id="shelf-1">
-                  <span class="shelf-label">🥛 유제품 & 달걀</span>
+                  <span class="shelf-label">🥛 냉장 식재료</span>
                   <div class="shelf-items">${s1Html}</div>
                 </div>
                 
                 <!-- Shelf 2 -->
                 <div class="fridge-shelf-rack" id="shelf-2">
-                  <span class="shelf-label">🍳 식사 & 고기</span>
+                  <span class="shelf-label">🍳 고기 & 한 끼</span>
                   <div class="shelf-items">${s2Html}</div>
                 </div>
                 
                 <!-- Shelf 3 -->
                 <div class="fridge-shelf-rack" id="shelf-3">
-                  <span class="shelf-label">🥕 신선 야채</span>
+                  <span class="shelf-label">🧂 양념 & 조미료</span>
                   <div class="shelf-items">${s3Html}</div>
                 </div>
                 
@@ -554,7 +547,7 @@ function renderFridge() {
             
             <!-- Bottom Drawer (Veggies) -->
             <div class="fridge-drawer-vegetable">
-              <span class="drawer-handle">야채칸 🥬</span>
+              <span class="drawer-handle">채소칸 🥬</span>
               <div class="drawer-items">${sDrawerHtml}</div>
             </div>
             
@@ -586,6 +579,12 @@ function renderFridge() {
                   </div>
                   <div class="door-pocket ${state.activeCategory === "grain" ? "active" : ""}" data-cat="grain">
                     <span>🍞</span> 곡류·식사
+                  </div>
+                  <div class="door-pocket ${state.activeCategory === "sauce" ? "active" : ""}" data-cat="sauce">
+                    <span>🫙</span> 소스·오일
+                  </div>
+                  <div class="door-pocket ${state.activeCategory === "seasoning" ? "active" : ""}" data-cat="seasoning">
+                    <span>🧂</span> 가루·조미료
                   </div>
                 </div>
               </div>

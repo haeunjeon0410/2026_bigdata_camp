@@ -53,7 +53,6 @@ const csvRows = csvLines.slice(1).map((line) => {
   );
 });
 
-// [P0 버그 수정] 재료 양끝 공백 제거로 카테고리 매칭 꼬임 원천 차단[cite: 1]
 const ingredientNames = [
   ...new Set([
     ...csvRows.flatMap((row) => 
@@ -115,32 +114,32 @@ const ingredientCategoryMap = {
   계란: "dairy",
   두부: "dairy",
   순두부: "dairy",
-  마요네즈: "dairy",
   치즈: "dairy",
   돼지고기: "meat",
   소고기: "meat",
   소시지: "meat",
   스팸: "meat",
   베이컨: "meat",
-  간장: "meat",
-  굴소스: "meat",
-  케첩: "meat",
-  카레가루: "meat",
-  고추장: "meat",
-  고춧가루: "meat",
-  다시다: "meat",
-  참기름: "meat",
-  올리브유: "meat",
-  토마토소스: "meat",
-  식초: "meat",
-  설탕: "meat",
-  소금: "meat",
-  후추: "meat",
-  식용유: "meat",
-  부침가루: "meat",
-  전분가루: "meat",
-  춘장: "meat",
-  된장: "meat",
+  마요네즈: "sauce",
+  간장: "sauce",
+  굴소스: "sauce",
+  케첩: "sauce",
+  고추장: "sauce",
+  참기름: "sauce",
+  올리브유: "sauce",
+  토마토소스: "sauce",
+  식초: "sauce",
+  식용유: "sauce",
+  춘장: "sauce",
+  된장: "sauce",
+  카레가루: "seasoning",
+  고춧가루: "seasoning",
+  다시다: "seasoning",
+  설탕: "seasoning",
+  소금: "seasoning",
+  후추: "seasoning",
+  부침가루: "seasoning",
+  전분가루: "seasoning",
   밥: "grain",
   국수: "grain",
   스파게티면: "grain",
@@ -166,6 +165,23 @@ const ingredientCategory = (name) => {
     return "vegetable";
   }
   return category;
+};
+
+const chilledSauceNames = new Set([
+  "마요네즈",
+  "케첩",
+  "굴소스",
+  "토마토소스",
+  "된장",
+  "고추장",
+]);
+
+const ingredientStorage = (name) => {
+  const category = ingredientCategory(name);
+  if (category === "dairy" || chilledSauceNames.has(name)) return "shelf-1";
+  if (category === "meat" || category === "grain") return "shelf-2";
+  if (category === "vegetable") return "drawer";
+  return "shelf-3";
 };
 
 const rowFixes = {
@@ -230,7 +246,6 @@ const cuisineTypeMap = {
   탕수육: "중식",
 };
 
-// [P1 버그 수정] 오므라이스와 카레라이스의 대체 재료 팁을 실제 존재하는 재료 기반으로 교정하였습니다![cite: 1]
 const substituteTipsMap = {
   "감자전": [
     { original: "부침가루", alternatives: ["밀가루", "전분가루"], note: "전분가루를 쓰면 더 쫄깃해져요." },
@@ -239,14 +254,12 @@ const substituteTipsMap = {
     { original: "간장", alternatives: ["굴소스", "소금"], note: "굴소스를 넣으면 감칠맛이 살아납니다." },
   ],
   "오므라이스": [
-    // 오므라이스의 실제 재료인 '케첩' 기반으로 대체 팁 수정![cite: 1]
     { original: "케첩", alternatives: ["돈가스 소스", "토마토 소스"], note: "돈가스 소스를 볶음밥에 넣어도 묵직한 감칠맛이 납니다." },
   ],
   "덮밥": [
     { original: "굴소스", alternatives: ["간장+올리고당"], note: "굴소스가 없으면 간장 and 당류를 조합해보세요." },
   ],
   "카레라이스": [
-    // 카레라이스의 실제 재료인 '카레가루' 기반으로 대체 팁 수정![cite: 1]
     { original: "카레가루", alternatives: ["고형 카레", "짜장가루"], note: "고형 카레를 조각내서 넣거나, 짜장가루로 색다르게 짜장밥을 만들어도 좋습니다." },
   ],
   "비빔면": [
@@ -319,6 +332,7 @@ export const INGREDIENTS = ingredientNames.map((name, index) => ({
   name,
   emoji: ingredientEmoji[name] || "🥕",
   category: ingredientCategory(name),
+  storage: ingredientStorage(name),
 }));
 
 export const CATEGORIES = {
@@ -327,6 +341,8 @@ export const CATEGORIES = {
   vegetable: { name: "채소·과일", emoji: "🥦" },
   meat: { name: "고기·가공품", emoji: "🥓" },
   grain: { name: "곡류·식사", emoji: "🍞" },
+  sauce: { name: "소스·오일", emoji: "🫙" },
+  seasoning: { name: "가루·조미료", emoji: "🧂" },
 };
 
 // 일반 레시피용 필요 수량 매핑 (형묵 요청, recommend.js의 cookingMethods 실제 계량 기준)
