@@ -56,10 +56,22 @@ function normalizeIngredientName(name) {
   return String(name || '').trim().toLowerCase();
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[character]));
+}
+
 function getCustomDeleteButtonMarkup(ingredient) {
   if (!ingredient.isCustom) return '';
+  const escapedId = escapeHtml(ingredient.id);
+  const escapedName = escapeHtml(ingredient.name);
   return `
-    <button type="button" data-delete-custom-ingredient="${ingredient.id}" aria-label="${ingredient.name} 삭제" style="margin-left: 4px; padding: 0 3px; border: 0; background: transparent; cursor: pointer;">×</button>
+    <button type="button" data-delete-custom-ingredient="${escapedId}" aria-label="${escapedName} 삭제" style="margin-left: 4px; padding: 0 3px; border: 0; background: transparent; cursor: pointer;">×</button>
   `;
 }
 
@@ -109,7 +121,6 @@ function applyIngredientVisibility() {
     sticker.classList.toggle('selected', visible);
     sticker.setAttribute('aria-checked', String(visible));
   });
-  renderSelectedIngredientsInFridge();
 }
 
 function getShelfItemsForIngredient(ingredient) {
@@ -131,39 +142,31 @@ function createFridgeSticker(ingredient) {
   sticker.style.cssText = '--tilt: 0deg; display: inline-flex;';
   sticker.innerHTML = `
     <span class="sticker-chk">✔</span>
-    <span class="sticker-emoji">${ingredient.emoji}</span>
-    <span class="sticker-name">${ingredient.name}</span>
+    <span class="sticker-emoji">${escapeHtml(ingredient.emoji)}</span>
+    <span class="sticker-name">${escapeHtml(ingredient.name)}</span>
     ${getCustomDeleteButtonMarkup(ingredient)}
   `;
   return sticker;
 }
 
 function renderSelectedIngredientsInFridge() {
-  document.querySelector('[data-selected-ingredients]')?.remove();
-
   const fridgeStickers = document.querySelectorAll('.fridge-cavity-interior .ingredient-sticker, .fridge-drawer-vegetable .ingredient-sticker');
   const allIngredients = [...INGREDIENTS, ...loadCustomIngredients()];
-  const selectedIds = new Set(allIngredients.filter((ingredient) => state.selected.has(ingredient.id)).map((ingredient) => ingredient.id));
+  const selectedIds = new Set(allIngredients
+    .filter((ingredient) => state.selected.has(ingredient.id))
+    .filter((ingredient) => state.activeCategory === 'all' || ingredient.category === state.activeCategory)
+    .map((ingredient) => ingredient.id));
 
   fridgeStickers.forEach((sticker) => {
     if (!selectedIds.has(sticker.dataset.ing)) {
       if (sticker.hasAttribute('data-selected-fridge')) sticker.remove();
-      else {
-        sticker.style.display = 'none';
-        sticker.classList.remove('selected');
-        sticker.setAttribute('aria-checked', 'false');
-      }
     }
   });
 
-  allIngredients.filter((ingredient) => selectedIds.has(ingredient.id)).forEach((ingredient) => {
-    const existing = document.querySelector(`.fridge-cavity-interior .ingredient-sticker[data-ing="${ingredient.id}"], .fridge-drawer-vegetable .ingredient-sticker[data-ing="${ingredient.id}"]`);
-    if (existing) {
-      existing.style.display = 'inline-flex';
-      existing.classList.add('selected');
-      existing.setAttribute('aria-checked', 'true');
-      return;
-    }
+  allIngredients.filter((ingredient) => selectedIds.has(ingredient.id) && ingredient.isCustom).forEach((ingredient) => {
+    const existing = [...document.querySelectorAll('.fridge-cavity-interior .ingredient-sticker, .fridge-drawer-vegetable .ingredient-sticker')]
+      .find((sticker) => sticker.dataset.ing === ingredient.id);
+    if (existing) return;
 
     const shelfItems = getShelfItemsForIngredient(ingredient);
     if (!shelfItems) return;
@@ -241,7 +244,7 @@ function updateSearchResults() {
     }[character]));
     area.hidden = false;
     area.innerHTML = `
-      ${hasAnyMatch ? '' : `<button type="button" id="btn-add-custom-ingredient" data-ingredient-name="${escapedSearch}" style="margin-top: 8px;">&#39;${escapedSearch}&#39; \uCD94\uAC00\uD558\uAE30</button>`}
+      ${hasAnyMatch ? '' : `<button type="button" id="btn-add-custom-ingredient" style="margin-top: 8px;">&#39;${escapedSearch}&#39; \uCD94\uAC00\uD558\uAE30</button>`}
       <p style="margin: 0; font-size: 12px; color: var(--color-gray);">‘${escapedSearch}’에 대한 검색 결과가 없습니다.</p>
       <p style="margin: 4px 0 0; font-size: 11px; color: var(--color-gray);">다른 이름으로 검색해보세요.</p>
     `;
@@ -249,13 +252,13 @@ function updateSearchResults() {
     const stickers = results.map((ingredient) => `
       <div class="ingredient-sticker ${state.selected.has(ingredient.id) ? 'selected' : ''}"
            data-search-result="true"
-           data-ing="${ingredient.id}"
+           data-ing="${escapeHtml(ingredient.id)}"
            role="checkbox"
            aria-checked="${state.selected.has(ingredient.id)}"
            style="--tilt: 0deg; display: inline-flex; font-size: 12px; padding: 6px 10px;">
         <span class="sticker-chk">✔</span>
-        <span class="sticker-emoji">${ingredient.emoji}</span>
-        <span class="sticker-name">${ingredient.name}</span>
+        <span class="sticker-emoji">${escapeHtml(ingredient.emoji)}</span>
+        <span class="sticker-name">${escapeHtml(ingredient.name)}</span>
         ${getCustomDeleteButtonMarkup(ingredient)}
       </div>
     `).join('');
@@ -277,6 +280,7 @@ function render() {
 
 function renderIngredientList() {
   applyIngredientVisibility();
+  renderSelectedIngredientsInFridge();
   updateSearchResults();
 }
 
@@ -290,6 +294,10 @@ export function initIngredient() {
   document.addEventListener('click', (event) => {
     const fridgeEntry = event.target.closest('[data-nav="fridge"], #btn-start-fridge');
     if (fridgeEntry) {
+      showCategoryCandidates = false;
+      state.search = '';
+      const searchInput = document.querySelector('#fridge-search-input');
+      if (searchInput) searchInput.value = '';
       setTimeout(() => render(), 0);
       return;
     }
@@ -308,6 +316,7 @@ export function initIngredient() {
       if (!saveCustomIngredients(nextIngredients)) return;
       state.selected.delete(ingredientId);
       render();
+      updateCarouselRecipes();
       return;
     }
 
@@ -342,8 +351,7 @@ export function initIngredient() {
         sticker.classList.add('pop-jelly');
         setTimeout(() => sticker.classList.remove('pop-jelly'), 350);
       }
-      renderSelectedIngredientsInFridge();
-      updateSearchResults();
+      renderIngredientList();
       updateFooter();
       updateCarouselRecipes();
       return;
@@ -355,8 +363,7 @@ export function initIngredient() {
         item.classList.remove('selected');
         item.setAttribute('aria-checked', 'false');
       });
-      renderSelectedIngredientsInFridge();
-      updateSearchResults();
+      renderIngredientList();
       updateFooter();
       updateCarouselRecipes();
       showToast('선택한 재료를 모두 초기화했어요.');
@@ -369,6 +376,7 @@ export function initIngredient() {
         state.activeCategory = pocket.dataset.cat;
         showCategoryCandidates = true;
         render();
+        updateCarouselRecipes();
         return;
       }
 
@@ -409,6 +417,7 @@ export function initIngredient() {
     if (!event.target.matches('#fridge-search-input')) return;
     state.search = event.target.value.toLowerCase().trim();
     pendingCustomIngredientName = '';
+    if (!state.search) showCategoryCandidates = false;
     if (event.isComposing || isComposingSearch) return;
     renderIngredientList();
   });
@@ -422,6 +431,7 @@ export function initIngredient() {
     if (!event.target.matches('#fridge-search-input')) return;
     isComposingSearch = false;
     state.search = event.target.value.toLowerCase().trim();
+    if (!state.search) showCategoryCandidates = false;
     renderIngredientList();
   });
 }
