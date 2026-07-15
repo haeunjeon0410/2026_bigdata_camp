@@ -1,6 +1,5 @@
 /* recipes_jsonb.csv 기반 레시피 데이터 */
 
-// 탕수육의 steps에 포함된 쉼표(,)들을 안전하게 큰따옴표("")로 감싸 파싱 꼬임을 원천 차단했습니다.
 const RAW_RECIPES = `name,category,ingredients,cook_time,difficulty,steps,emoji,aiReason,cookingSequence
 감자전,반찬·간편식,"감자, 계란, 부침가루, 식용유",20,쉬움,1. 감자를 강판이나 믹서로 곱게 갈아준다. | 2. 간 감자에 부침가루와 계란을 넣고 골고루 섞는다. | 3. 팬에 식용유를 두르고 반죽을 얇게 펴서 굽는다. | 4. 앞뒤로 노릇하게 구워지면 완성.,🥔,바삭하고 고소한 감자전은 비 오는 날이나 출출한 저녁 야식으로 딱 좋은 메뉴예요.,"['🥔', '🥣', '🍳', '🍽️']"
 볶음밥,밥류,"밥, 계란, 양파, 당근, 식용유, 간장",15,쉬움,1. 양파와 당근을 잘게 썬다. | 2. 팬에 기름을 두르고 채소를 볶는다. | 3. 밥을 넣고 간장으로 간을 하며 볶는다. | 4. 계란후라이를 올려 마무리한다.,🍛,남은 야채와 찬밥으로 빠르게 든든하고 맛있는 한 끼를 해결할 수 있어요.,"['🥕', '🍳', '🍚', '🍛']"
@@ -27,7 +26,7 @@ const RAW_RECIPES = `name,category,ingredients,cook_time,difficulty,steps,emoji,
 샌드위치,반찬·간편식,"식빵, 계란, 양배추, 마요네즈",15,쉬움,1. 계란을 삶아 으깬 뒤 마요네즈와 섞는다. | 2. 양배추를 채썰어 준비한다. | 3. 식빵에 계란 샐러드와 양배추를 올린다. | 4. 다른 식빵으로 덮어 완성한다.,🥪,신선한 채소와 햄, 치즈를 빵 사이에 아낌없이 채워 피크닉이나 간편한 점심으로 즐기기 아주 좋습니다.,"['🍞', '🥩', '🥬', '🥪']"
 짜장면,면류,"국수, 돼지고기, 양파, 춘장, 전분가루, 식용유",25,보통,1. 돼지고기와 양파를 깍둑썰기 해 식용유에 볶는다. | 2. 춘장을 넣고 기름에 충분히 볶아 향을 낸다. | 3. 물을 넣고 끓인 뒤 전분가루 푼 물로 농도를 맞춘다. | 4. 삶은 면 위에 소스를 부어 완성한다.,🍜,달콤짭짤한 춘장 소스를 볶아 만든 짜장면은 중국집 맛을 그대로 재현한 든든한 별미예요.,"['🧅', '🍳', '🍜', '😋']"
 짬뽕,면류,"국수, 돼지고기, 양파, 양배추, 고춧가루, 대파",30,어려움,1. 돼지고기와 대파를 기름에 볶아 향을 낸다. | 2. 양파와 양배추를 넣고 센 불에 볶는다. | 3. 고춧가루와 물을 넣어 얼큰하게 끓인다. | 4. 삶은 면을 국물에 말아 완성한다.,🍲,얼큰하고 시원한 국물에 아삭한 채소가 듬뿍 들어가 얼큰함이 당길 때 딱인 중식 별미입니다.,"['🌶️', '🥬', '🍲', '🔥']"
-탕수육,메인요리,"돼지고기, 전분가루, 당근, 오이, 식초, 설탕, 간장",35,어려움,"1. 돼지고기에 전분가루를 고루 묻혀 바삭하게 튀긴다. | 2. 당근과 오이를 얇게 채썬다. | 3. 식초, 설탕, 간장을 끓여 새콤달콤한 소스를 만든다. | 4. 튀긴 고기와 채소에 소스를 부어 완성한다.",🍖,겉은 바삭하고 속은 촉촉한 고기에 새콤달콤한 소스를 곁들여 남녀노소 누구나 좋아하는 인기 중식 메뉴예요.,"['🥩', '🍳', '🍯', '😋']"`;
+탕수육,메인요리,"돼지고기, 전분가루, 당근, 오이, 식초, 설탕, 간장",35,어려움,"1. 돼지고기에 전분가루를 고루 묻혀 바삭하게 튀긴다. | 2. 당근 and 오이를 얇게 채썬다. | 3. 식초, 설탕, 간장을 끓여 새콤달콤한 소스를 만든다. | 4. 튀긴 고기와 채소에 소스를 부어 완성한다.",🍖,겉은 바삭하고 속은 촉촉한 고기에 새콤달콤한 소스를 곁들여 남녀노소 누구나 좋아하는 인기 중식 메뉴예요.,"['🥩', '🍳', '🍯', '😋']"`;
 
 function parseCsvLine(line) {
   const fields = [];
@@ -54,7 +53,7 @@ const csvRows = csvLines.slice(1).map((line) => {
   );
 });
 
-// [P0 버그 수정] 재료를 가져올 때 양끝 공백(.trim())을 제거해 카테고리 매칭이 꼬이는 것을 방지합니다.[cite: 1]
+// [P0 버그 수정] 재료 양끝 공백 제거로 카테고리 매칭 꼬임 원천 차단[cite: 1]
 const ingredientNames = [
   ...new Set([
     ...csvRows.flatMap((row) => 
@@ -159,7 +158,6 @@ const ingredientCategoryMap = {
   미역: "vegetable",
 };
 
-// [P0 버그 수정] 전달되는 재료명 역시 양끝 공백을 자르고 정확하게 맵과 매칭되도록 보정합니다.[cite: 1]
 const ingredientCategory = (name) => {
   const cleanName = name.trim();
   const category = ingredientCategoryMap[cleanName];
@@ -243,7 +241,7 @@ const substituteTipsMap = {
     { original: "돼지고기", alternatives: ["햄", "닭고기"], note: "햄을 잘게 썰어 넣어도 맛있습니다." },
   ],
   "덮밥": [
-    { original: "굴소스", alternatives: ["간장+올리고당"], note: "굴소스가 없으면 간장과 당류를 조합해보세요." },
+    { original: "굴소스", alternatives: ["간장+올리고당"], note: "굴소스가 없으면 간장 and 당류를 조합해보세요." },
   ],
   "카레라이스": [
     { original: "돼지고기", alternatives: ["닭고기", "스팸"], note: "닭가슴살을 넣으면 담백한 카레가 됩니다." },
@@ -279,7 +277,7 @@ const substituteTipsMap = {
     { original: "순두부", alternatives: ["일반 모두부"], note: "일반 두부를 으깨어 넣어도 부드럽게 즐길 수 있어요." },
   ],
   "부대찌개": [
-    { original: "스팸", alternatives: ["프랑크 소시지", "다진 고기"], note: "다양한 종류의 햄을 섞을수록 맛있습니다." },
+    { original: "스팸", alternatives: ["프랑크 소시지", "다진 고기"], note: "다양한 종류 of 햄을 섞을수록 맛있습니다." },
   ],
   "미역국": [
     { original: "소고기", alternatives: ["황태", "홍합", "들깨가루"], note: "황태나 들깨가루를 넣으면 구수하고 시원해요." },
@@ -344,7 +342,7 @@ export const RECIPES = csvRows.map((row, index) => {
     id: `r${index + 1}`,
     name: row.name,
     category: row.category,
-    emoji: fix.emoji || row.emoji, // fix 구조에 명시된 데이터가 최우선 적용되도록 보장합니다.
+    emoji: fix.emoji || row.emoji,
     difficulty: row.difficulty,
     time: `${row.cook_time}분`,
     need: ingredients
@@ -363,6 +361,9 @@ export const RECIPES = csvRows.map((row, index) => {
   };
 });
 
+// ==========================================
+// [신규 기능 연동] ALTERNATIVE_RECIPES 내 needAmounts 수량 매핑 데이터 추가
+// ==========================================
 export const ALTERNATIVE_RECIPES = [
   {
     id: "alt1",
@@ -370,7 +371,10 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍝",
     difficulty: "쉬움",
     time: "10분",
-    need: ["i43"],
+    need: ["i43"], // 치즈
+    needAmounts: {
+      i43: "1~2개"
+    },
     missing: ["자이언트 떡볶이", "콕콕콕 스파게티", "프랑크 소시지"],
     aiReason:
       "편의점 마니아라면 모를 수 없는 그 레시피! 극락의 단짠 조합입니다.",
@@ -402,7 +406,11 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍙",
     difficulty: "쉬움",
     time: "5분",
-    need: ["i43", "i05"],
+    need: ["i43", "i05"], // 치즈, 마요네즈(또는 김밥 내 참치마요 대체)
+    needAmounts: {
+      i43: "1장",
+      i05: "약간"
+    },
     missing: ["불닭볶음면", "참치마요 삼각김밥"],
     aiReason: "매콤한 맛과 고소한 참치마요 삼김이 만나 완벽한 한 끼가 됩니다!",
     ingredients: [
@@ -414,7 +422,7 @@ export const ALTERNATIVE_RECIPES = [
       "불닭볶음면을 익혀 물을 따라버리고 소스를 넣어 비벼줍니다.",
       "면을 조금 남기거나 가위로 잘게 자른 뒤 참치마요 삼각김밥을 김째 부수어 넣습니다.",
       "위에 스트링치즈를 얹은 뒤 전자레인지에 1분간 가동합니다.",
-      "치즈가 녹으면 삼각김밥 and 면, 불닭 소스를 골고루 비벼 맛있게 떠먹습니다.",
+      "치즈가 녹으면 삼각김밥과 면, 불닭 소스를 골고루 비벼 맛있게 떠먹습니다.",
     ],
     cookingSequence: ["🍙", "🧀", "🍳", "🌶️"],
     priceList: [
@@ -431,7 +439,11 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍜",
     difficulty: "쉬움",
     time: "8분",
-    need: ["i02", "i27"],
+    need: ["i02", "i27"], // 계란, 대파
+    needAmounts: {
+      i02: "1개",
+      i27: "약간"
+    },
     missing: ["라면 1봉지", "쌈장 반스푼"],
     aiReason:
       "집에 쌈장이 남으셨나요? 고깃집에서 먹던 깊은 구수의 극치 라면 맛이 납니다.",
@@ -461,7 +473,10 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍲",
     difficulty: "쉬움",
     time: "10분",
-    need: ["i43"],
+    need: ["i43"], // 치즈
+    needAmounts: {
+      i43: "2장"
+    },
     missing: ["신라면 1봉지", "짜파게티 1봉지"],
     aiReason:
       "기생충에 소개된 짜파구리에 고소한 치즈를 더해 더 걸쭉하고 맛있게 즐겨봐요.",
@@ -487,7 +502,11 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🥔",
     difficulty: "쉬움",
     time: "12분",
-    need: ["i43", "i44"],
+    need: ["i43", "i44"], // 치즈, 베이컨
+    needAmounts: {
+      i43: "1컵",
+      i44: "약간"
+    },
     missing: ["허니버터칩 1봉지"],
     aiReason:
       "감자 가는 게 귀찮을 때! 허니버터 감자칩으로 순식간에 달콤 바삭한 감자전을 만들어요.",
@@ -517,7 +536,12 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍞",
     difficulty: "쉬움",
     time: "7분",
-    need: ["i39", "i02", "i43"],
+    need: ["i39", "i02", "i43"], // 식빵, 계란, 치즈
+    needAmounts: {
+      i39: "1장",
+      i02: "1개",
+      i43: "1T"
+    },
     missing: ["종이컵"],
     aiReason:
       "핫케이크 가루 없이 식빵 한 장과 전자레인지만으로 계란빵의 맛을 완벽 재현합니다.",
