@@ -6,9 +6,33 @@ import {
   hasActiveRecipeFilters,
 } from "./recommend.js";
 
+const SELECTED_INGREDIENTS_KEY = "selectedIngredients";
+
+function loadSelectedIngredients() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SELECTED_INGREDIENTS_KEY) || "[]");
+    return Array.isArray(saved)
+      ? new Set(saved.filter((id) => typeof id === "string" && id.trim()))
+      : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveSelectedIngredients() {
+  try {
+    localStorage.setItem(
+      SELECTED_INGREDIENTS_KEY,
+      JSON.stringify([...state.selected]),
+    );
+  } catch (err) {
+    console.warn("선택 재료 저장 실패:", err);
+  }
+}
+
 // Initial State Management
 export const state = {
-  selected: new Set(), // 협업/테스트 검증을 위해 기본 선택 재료를 비워두었습니다.
+  selected: loadSelectedIngredients(),
   search: "",
   activeCategory: "all",
   favorites: (() => {
@@ -135,6 +159,7 @@ export function navigate(route, param) {
         recipe.need.forEach((ingId) => {
           state.selected.delete(ingId);
         });
+        saveSelectedIngredients();
       }
     }
   }

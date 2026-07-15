@@ -58,31 +58,56 @@ export async function fetchIngredientsFromSupabase(fallbackIngredients = []) {
   }
 }
 
-/**
- * 즐겨찾기 상태를 Supabase에 동기화(추가/삭제)하기 위한 인터페이스 스케치입니다.
- */
+/** 익명 로그인 세션을 준비합니다. 이메일 로그인이나 비밀번호가 필요 없습니다. */
+export async function ensureAnonymousSession() {
+  if (!supabase) return null;
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (sessionData.session?.user) return sessionData.session.user;
+
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error) throw error;
+  return data.user;
+}
+
+/** 현재 익명 사용자의 즐겨찾기 목록을 조회합니다. */
+export async function fetchFavoriteRows() {
+  const user = await ensureAnonymousSession();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('favorite')
+    .select('recipe_id, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+/** 현재 익명 사용자의 즐겨찾기를 추가하거나 삭제합니다. */
 export async function toggleFavoriteInSupabase(recipeId, isAdding) {
-  if (!supabase) {
-    console.log(`💾 [Local] 즐겨찾기 상태 로컬 처리 완료 (ID: ${recipeId})`);
-    return;
+  const user = await ensureAnonymousSession();
+  if (!user) return { synced: false };
+
+  if (isAdding) {
+    const { error } = await supabase
+      .from('favorite')
+      .upsert(
+        [{ user_id: user.id, recipe_id: String(recipeId) }],
+        { onConflict: 'user_id,recipe_id', ignoreDuplicates: true },
+      );
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from('favorite')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('recipe_id', String(recipeId));
+    if (error) throw error;
   }
 
-  try {
-    if (isAdding) {
-      const { error } = await supabase
-        .from('favorites')
-        .insert([{ recipe_id: recipeId }]);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('favorites')
-        .delete()
-        .eq('recipe_id', recipeId);
-      if (error) throw error;
-    }
-  } catch (err) {
-    console.error('❌ [Supabase] 즐겨찾기 동기화 실패:', err.message);
-  }
+  return { synced: true };
 }
 
 /**
