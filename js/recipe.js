@@ -5,7 +5,7 @@
 /* 레시피 및 조리 기능 모듈 */
 
 import { state, showToast, render, navigate } from './app.js';
-import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { INGREDIENTS, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
 import { addShoppingItems } from './shopping.js';
 
 function getIngredientKeys(value) {
@@ -43,10 +43,29 @@ function getIngredientAmount(need) {
 }
 
 function getMissingIngredients(recipe, selectedKeys) {
-  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing) && recipe.missing.length) {
-    return recipe.missing
+  if (String(recipe?.id || '').startsWith('alt')) {
+    const fixedMissing = Array.isArray(recipe.missing)
+      ? recipe.missing
       .map((ingredientName) => ({ ingredientName: String(ingredientName).trim(), amount: '1개' }))
-      .filter((item) => item.ingredientName);
+      .filter((item) => item.ingredientName)
+      : [];
+    const missingNeed = (Array.isArray(recipe.need) ? recipe.need : [])
+      .filter((ingredientId) => !selectedKeys.has(String(ingredientId).trim().toLowerCase()))
+      .map((ingredientId) => {
+        const ingredient = INGREDIENTS.find((item) => item.id === ingredientId);
+        return {
+          ingredientId,
+          ingredientName: ingredient?.name || String(ingredientId).trim(),
+          amount: String(recipe.needAmounts?.[ingredientId] || '약간').trim() || '약간'
+        };
+      });
+    const seen = new Set();
+    return [...fixedMissing, ...missingNeed].filter((item) => {
+      const key = String(item.ingredientName).trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   if (!Array.isArray(recipe?.need)) return [];
