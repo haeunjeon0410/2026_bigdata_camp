@@ -163,5 +163,3 @@ export function initShopping() {
     toggleShoppingItemCompleted(decodeURIComponent(item.dataset.shoppingItem));
   });
 }
-
-

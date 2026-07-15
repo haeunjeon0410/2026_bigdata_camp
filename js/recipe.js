@@ -43,6 +43,14 @@ function getIngredientAmount(need) {
 }
 
 function getMissingIngredients(recipe, selectedKeys) {
+  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing) && recipe.missing.length) {
+    return recipe.missing
+      .map((ingredientName) => ({ ingredientName: String(ingredientName).trim(), amount: '1개' }))
+      .filter((item) => item.ingredientName);
+  }
+
+  if (!Array.isArray(recipe?.need)) return [];
+
   return recipe.need.map((need, index) => {
     const recipeIngredient = recipe.ingredients?.[index];
     const needKeys = new Set([
@@ -202,5 +210,3 @@ export function initRecipe() {
     }
   });
 }
-
-
