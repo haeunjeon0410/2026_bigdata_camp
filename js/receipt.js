@@ -3,6 +3,7 @@ import {
   showToast,
   state,
   updateCarouselRecipes,
+  saveSelectedIngredients,
 } from "./app.js";
 import { INGREDIENTS, registerIngredient } from "./data.js";
 import { analyzeReceipt } from "./supabase.js";
@@ -505,6 +506,7 @@ function addSelectedIngredients() {
     if (!state.selected.has(ingredientId)) addedCount += 1;
     state.selected.add(ingredientId);
   });
+  saveSelectedIngredients();
 
   state.search = "";
   state.activeCategory = "all";

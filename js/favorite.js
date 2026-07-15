@@ -4,7 +4,8 @@
 //------------------------------------
 /* 즐겨찾기 기능 모듈 */
 
-import { state, render } from './app.js';
+import { state, render, showToast } from './app.js';
+import { fetchFavoriteRows, toggleFavoriteInSupabase } from './supabase.js';
 
 const FAVORITE_ADDED_AT_KEY = 'favoriteAddedAt';
 
@@ -39,7 +40,38 @@ export function getFavoriteAddedAt(recipeId) {
   return getFavoriteAddedAtMap()[recipeId];
 }
 
+async function loadFavorites() {
+  try {
+    const rows = await fetchFavoriteRows();
+    if (rows === null) return;
+
+    const serverIds = new Set(rows.map((row) => String(row.recipe_id)));
+    // 기존 localStorage 즐겨찾기가 있으면 최초 1회 Supabase로 이전합니다.
+    if (serverIds.size === 0 && state.favorites.size > 0) {
+      await Promise.all(
+        [...state.favorites].map((recipeId) =>
+          toggleFavoriteInSupabase(recipeId, true),
+        ),
+      );
+    } else {
+      state.favorites = serverIds;
+    }
+
+    const addedAtMap = getFavoriteAddedAtMap();
+    rows.forEach((row) => {
+      if (row.created_at) addedAtMap[String(row.recipe_id)] = row.created_at;
+    });
+    saveFavoriteAddedAtMap(addedAtMap);
+    render();
+  } catch (error) {
+    console.error('❌ [Supabase] 익명 즐겨찾기 로딩 실패:', error.message);
+    showToast('Supabase 익명 로그인을 확인해주세요.');
+  }
+}
+
 export function initFavorite() {
+  loadFavorites();
+
   document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-recipe-id]');
     if (!button) return;
@@ -50,7 +82,8 @@ export function initFavorite() {
     const recipeId = button.dataset.recipeId;
     if (!recipeId) return;
 
-    if (state.favorites.has(recipeId)) {
+    const isAdding = !state.favorites.has(recipeId);
+    if (!isAdding) {
       state.favorites.delete(recipeId);
       removeFavoriteAddedAt(recipeId);
     } else {
@@ -61,6 +94,19 @@ export function initFavorite() {
     }
 
     render();
+
+    toggleFavoriteInSupabase(recipeId, isAdding).catch((error) => {
+      if (isAdding) {
+        state.favorites.delete(recipeId);
+        removeFavoriteAddedAt(recipeId);
+      } else {
+        state.favorites.add(recipeId);
+        recordFavoriteAddedAt(recipeId);
+      }
+      render();
+      console.error('❌ [Supabase] 즐겨찾기 저장 실패:', error.message);
+      showToast('즐겨찾기 저장에 실패했어요.');
+    });
   });
 }
 

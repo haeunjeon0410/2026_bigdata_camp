@@ -9,6 +9,7 @@ import {
   showToast,
   render as appRender,
   updateCarouselRecipes,
+  saveSelectedIngredients,
 } from "./app.js";
 import { INGREDIENTS } from "./data.js";
 
@@ -150,6 +151,7 @@ function addCustomIngredient(category) {
   customIngredients.push(newIngredient);
   if (!saveCustomIngredients(customIngredients)) return false;
   state.selected.add(newIngredient.id);
+  saveSelectedIngredients();
   pendingCustomIngredientName = "";
   state.search = "";
   return true;
@@ -463,6 +465,7 @@ export function initIngredient() {
         ingredientIds.forEach((id) => state.selected.delete(id));
         showToast("현재 재료의 선택을 해제했어요.");
       }
+      saveSelectedIngredients();
       refreshIngredientView();
       updateCarouselRecipes();
       return;
@@ -484,6 +487,7 @@ export function initIngredient() {
         sticker.classList.add("pop-jelly");
         setTimeout(() => sticker.classList.remove("pop-jelly"), 350);
       }
+      saveSelectedIngredients();
       refreshIngredientView();
       updateCarouselRecipes();
       return;
@@ -491,6 +495,7 @@ export function initIngredient() {
 
     if (event.target.closest("#btn-fridge-clear")) {
       state.selected.clear();
+      saveSelectedIngredients();
       document.querySelectorAll(".ingredient-sticker").forEach((item) => {
         item.classList.remove("selected");
         item.setAttribute("aria-checked", "false");
