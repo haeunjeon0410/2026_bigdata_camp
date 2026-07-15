@@ -51,7 +51,11 @@ const csvRows = csvLines.slice(1).map((line) => {
 });
 
 const ingredientNames = [
-  ...new Set(csvRows.flatMap((row) => row.ingredients.split(", "))),
+  ...new Set([
+    ...csvRows.flatMap((row) => row.ingredients.split(", ")),
+    "치즈",
+    "베이컨",
+  ]),
 ];
 const ingredientEmoji = {
   계란: "🥚",
@@ -245,6 +249,9 @@ export const RECIPES = csvRows.map((row, index) => {
   };
 });
 
+const getIngredientId = (name) =>
+  INGREDIENTS.find((ingredient) => ingredient.name === name)?.id;
+
 export const ALTERNATIVE_RECIPES = [
   {
     id: "alt1",
@@ -252,7 +259,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍝",
     difficulty: "쉬움",
     time: "10분",
-    need: ["cheese"],
+    need: [getIngredientId("치즈")],
     missing: ["자이언트 떡볶이", "콕콕콕 스파게티", "프랑크 소시지"],
     aiReason:
       "편의점 마니아라면 모를 수 없는 그 레시피! 극락의 단짠 조합입니다.",
@@ -284,7 +291,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍙",
     difficulty: "쉬움",
     time: "5분",
-    need: ["cheese", "rice"],
+    need: [getIngredientId("치즈"), getIngredientId("밥")],
     missing: ["불닭볶음면", "참치마요 삼각김밥"],
     aiReason: "매콤한 맛과 고소한 참치마요 삼김이 만나 완벽한 한 끼가 됩니다!",
     ingredients: [
@@ -313,7 +320,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍜",
     difficulty: "쉬움",
     time: "8분",
-    need: ["egg", "greenonion"],
+    need: [getIngredientId("계란"), getIngredientId("대파")],
     missing: ["라면 1봉지", "쌈장 반스푼"],
     aiReason:
       "집에 쌈장이 남으셨나요? 고깃집에서 먹던 깊은 구수의 극치 라면 맛이 납니다.",
@@ -343,7 +350,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍲",
     difficulty: "쉬움",
     time: "10분",
-    need: ["cheese"],
+    need: [getIngredientId("치즈")],
     missing: ["신라면 1봉지", "짜파게티 1봉지"],
     aiReason:
       "기생충에 소개된 짜파구리에 고소한 치즈를 더해 더 걸쭉하고 맛있게 즐겨봐요.",
@@ -369,7 +376,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🥔",
     difficulty: "쉬움",
     time: "12분",
-    need: ["cheese", "bacon"],
+    need: [getIngredientId("치즈"), getIngredientId("베이컨")],
     missing: ["허니버터칩 1봉지"],
     aiReason:
       "감자 가는 게 귀찮을 때! 허니버터 감자칩으로 순식간에 달콤 바삭한 감자전을 만들어요.",
@@ -399,7 +406,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍞",
     difficulty: "쉬움",
     time: "7분",
-    need: ["bread", "egg", "cheese"],
+    need: [getIngredientId("식빵"), getIngredientId("계란"), getIngredientId("치즈")],
     missing: ["종이컵"],
     aiReason:
       "핫케이크 가루 없이 식빵 한 장과 전자레인지만으로 계란빵의 맛을 완벽 재현합니다.",

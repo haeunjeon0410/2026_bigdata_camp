@@ -16,6 +16,12 @@ let isSearchComposing = false;
 let searchRefreshTimer = null;
 let activeDifficultyFilter = 'all';
 
+export function hasActiveRecipeFilters() {
+  return selectedCuisines.size > 0
+    || activeDifficultyFilter !== 'all'
+    || Boolean(recipeSearchQuery.trim());
+}
+
 const cuisineKeywords = {
   한식: ['김치', '비빔', '찌개', '국', '탕', '불고기', '잡채', '김밥', '된장', '감자볶음', '계란말이', '볶음', '반찬'],
   양식: ['파스타', '토스트', '샌드위치', '피자', '스테이크', '샐러드', '팬케이크', '오믈렛', '그라탕', '리조또', '치즈'],
@@ -145,6 +151,7 @@ function getRecipeName(recipe) {
 function classifyCuisine(recipe) {
   const recipeName = String(recipe?.name || '').trim();
   if (cuisineOverrides[recipeName]) return cuisineOverrides[recipeName];
+  if (String(recipe?.id || '').startsWith('alt')) return '편의점';
   const text = [recipe.name, recipe.category, ...(recipe.ingredients || [])].join(' ');
   const matched = Object.entries(cuisineKeywords)
     .map(([cuisine, keywords]) => ({
@@ -199,9 +206,12 @@ function isFilterPreference(label) {
 }
 
 export function applyRecipeFilters() {
-  if (!Array.isArray(state.carouselRecipes)) return;
+  const sourceRecipes = Array.isArray(state.recipePool) && state.recipePool.length > 0
+    ? state.recipePool
+    : state.carouselRecipes;
+  if (!Array.isArray(sourceRecipes)) return;
 
-  const recipes = state.carouselRecipes.map((recipe) => {
+  const recipes = sourceRecipes.map((recipe) => {
     const preferenceScore = [...selectedPreferences].reduce((score, label) => {
       const rule = getPreferenceRule(label);
       return score + (rule && rule.test(recipe) ? 1 : 0);
@@ -243,8 +253,12 @@ export function applyRecipeFilters() {
     getMinutes(a) - getMinutes(b)
   );
 
-  state.carouselRecipes = searchedRecipes;
-  if (state.currentCarouselIndex >= searchedRecipes.length) state.currentCarouselIndex = 0;
+  // 메뉴는 전체 필터 결과를 사용하고, 캐러셀만 매칭율 상위 10개로 제한합니다.
+  state.carouselRecipes = state.recipeViewMode === 'menu'
+    ? searchedRecipes
+    : searchedRecipes.slice(0, 10);
+  const visibleRecipes = state.carouselRecipes;
+  if (state.currentCarouselIndex >= visibleRecipes.length) state.currentCarouselIndex = 0;
 }
 
 function addCuisineChoices() {
@@ -286,7 +300,7 @@ export function decorateRecipeCard() {
     toolbar.style.cssText = 'margin:0 auto 18px; max-width:760px; padding:14px; border:2px solid var(--color-charcoal); border-radius:var(--br-lg); background:var(--color-cream); box-shadow:0 4px 0 var(--color-charcoal);';
     toolbar.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:12px;">
-        ${['all', '한식', '중식', '일식', '양식'].map((cuisine) => `
+        ${['all', '한식', '중식', '일식', '양식', '편의점'].map((cuisine) => `
           <button type="button" class="chip-btn ${cuisine === 'all' && selectedCuisines.size === 0 ? 'active' : ''}" data-cuisine-filter="${cuisine}">
             ${cuisine === 'all' ? '전체' : cuisine}
           </button>
@@ -324,6 +338,8 @@ export function decorateRecipeCard() {
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', String(isActive));
   });
+
+  if (!state.carouselRecipes.length) return;
 
   if (recipesContainer) {
     const carousel = recipesContainer.querySelector('.carousel-wrapper');
@@ -472,6 +488,19 @@ export function initRecommend() {
   addCuisineChoices();
 
   document.addEventListener('click', (event) => {
+    const resetRecipeFilters = event.target.closest('#btn-reset-recipe-filters');
+    if (resetRecipeFilters) {
+      selectedPreferences.clear();
+      selectedCuisines.clear();
+      recipeSearchQuery = '';
+      activeDifficultyFilter = 'all';
+      state.showingAlternatives = false;
+      state.recipeSource = 'all';
+      state.recipeViewMode = 'menu';
+      refreshRecipeResults();
+      return;
+    }
+
     // 💥 중복/비동기 버그를 일으키던 queueMicrotask(syncRenderedView)와 data-nav="recipes" 수동 렌더 트리거 소거
     
     // 이스터에그: 토끼 요리사 클릭 시 음식 폭죽 팡 터짐!
@@ -530,6 +559,12 @@ export function initRecommend() {
       const cuisine = cuisineFilter.dataset.cuisineFilter;
       selectedCuisines.clear();
       if (cuisine !== 'all') selectedCuisines.add(cuisine);
+      state.showingAlternatives = cuisine === '편의점';
+      state.recipeSource = cuisine === 'all'
+        ? 'all'
+        : cuisine === '편의점'
+          ? 'alternative'
+          : 'normal';
       refreshRecipeResults();
       return;
     }
@@ -577,6 +612,7 @@ export function initRecommend() {
 
     if (event.target.closest('#btn-dislike-recipe')) {
       state.showingAlternatives = !state.showingAlternatives;
+      state.recipeSource = state.showingAlternatives ? 'alternative' : 'normal';
       state.recipeViewMode = 'carousel';
       window.__routingActive = true; // 편의점 레시피 전환 시 우아한 실크 페이드 유도
       refreshRecipeResults();
