@@ -159,6 +159,73 @@ export function updateCarouselRecipes() {
 
 // Event Listeners for Nav delegation
 document.addEventListener('click', (e) => {
+  // 🛒 장바구니 "장보기 완료" 버튼 클릭 시 이미 체크된(완료) 항목들만 촥촥촥 날아가는 소거 연출
+  const doneBtn = e.target.closest('#btn-shopping-modal-done');
+  if (doneBtn) {
+    const checkedItems = document.querySelectorAll('.shopping-checklist .shopping-item.checked');
+    const uncheckedItems = document.querySelectorAll('.shopping-checklist .shopping-item:not(.checked)');
+
+    if (checkedItems.length > 0) {
+      // 이벤트 전파 차단하여 shopping.js의 즉시 닫기 차단
+      e.stopImmediatePropagation();
+      e.preventDefault();
+
+      doneBtn.disabled = true;
+      doneBtn.textContent = '완료 처리 중... 📝';
+
+      // 1. 이미 체크된 녀석들만 촥촥촥 순차적으로 날아가는 fade-out 애니메이션 적용
+      checkedItems.forEach((item, idx) => {
+        setTimeout(() => {
+          item.classList.add('completed-fade');
+        }, idx * 80);
+      });
+
+      // 2. 모션이 끝난 후 DOM에서 삭제하고 로컬스토리지 반영 및 화면 정돈
+      setTimeout(() => {
+        // 체크 완료된 아이템들만 로컬스토리지에서 정밀 제외
+        try {
+          const currentSaved = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+          const uncheckedKeys = new Set([...uncheckedItems].map(item => decodeURIComponent(item.dataset.shoppingItem)));
+          const nextSaved = currentSaved.filter(saved => uncheckedKeys.has(saved.ingredientKey));
+          localStorage.setItem('shoppingList', JSON.stringify(nextSaved));
+        } catch (err) {
+          console.warn("장바구니 로컬스토리지 갱신 실패:", err);
+        }
+
+        // 체크 안 된 남은 항목이 아예 없다면 빈 화면 주입
+        if (uncheckedItems.length === 0) {
+          const list = document.querySelector('.shopping-checklist');
+          if (list) {
+            list.innerHTML = `
+              <li class="shopping-item-empty" style="text-align:center; padding: 25px 0; color: var(--color-gray); font-family: var(--font-hand); font-size: 17px; list-style: none;">
+                장바구니가 비어 있습니다 🛒
+              </li>
+            `;
+          }
+        } else {
+          // 남은 항목이 있다면 체크된 요소들만 DOM에서 제거하여 화면 갱신
+          checkedItems.forEach(item => item.remove());
+        }
+
+        // 모달 닫기
+        const modal = document.getElementById('shopping-modal');
+        if (modal) modal.classList.remove('show');
+
+        // 버튼 상태 복구
+        doneBtn.disabled = false;
+        doneBtn.textContent = '장보기 완료';
+      }, checkedItems.length * 80 + 450);
+      return;
+    } else {
+      // 체크된 것이 하나도 없다면, 그냥 아무 작업 없이 모달을 즉시 닫음
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      const modal = document.getElementById('shopping-modal');
+      if (modal) modal.classList.remove('show');
+      return;
+    }
+  }
+
   const navEl = e.target.closest('[data-nav]');
   if (navEl) {
     if (navEl.dataset.nav === 'recipes') state.recipeViewMode = 'menu';
@@ -732,7 +799,7 @@ function renderDetail(id) {
           ${substituteTipsHtml}
           <!-- Steps Memo Pad -->
           <div class="notebook-notepad">
-            <h4 class="notepad-title">👩🍳 주방 순서</h4>
+            <h4 class="notepad-title">🍳 요리 순서</h4>
             <ol class="notepad-steps">
               ${recipe.steps.map((step, idx) => `
                 <li data-step="${idx + 1}">${step}</li>

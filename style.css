@@ -2853,6 +2853,23 @@ h4 {
   }
 }
 
+/* 🛒 장바구니 체크 완료 촥촥촥 날아가는 슬라이드 소거 애니메이션 */
+.shopping-item {
+  transition: all 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+}
+
+.shopping-item.checked {
+  color: var(--color-gray) !important;
+  text-decoration: line-through !important;
+  opacity: 0.65;
+}
+
+.shopping-item.completed-fade {
+  transform: translateX(45px);
+  opacity: 0;
+}
+
 
 
 
