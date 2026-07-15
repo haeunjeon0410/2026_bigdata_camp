@@ -230,6 +230,7 @@ const cuisineTypeMap = {
   탕수육: "중식",
 };
 
+// [P1 버그 수정] 오므라이스와 카레라이스의 대체 재료 팁을 실제 존재하는 재료 기반으로 교정하였습니다![cite: 1]
 const substituteTipsMap = {
   "감자전": [
     { original: "부침가루", alternatives: ["밀가루", "전분가루"], note: "전분가루를 쓰면 더 쫄깃해져요." },
@@ -238,13 +239,15 @@ const substituteTipsMap = {
     { original: "간장", alternatives: ["굴소스", "소금"], note: "굴소스를 넣으면 감칠맛이 살아납니다." },
   ],
   "오므라이스": [
-    { original: "돼지고기", alternatives: ["햄", "닭고기"], note: "햄을 잘게 썰어 넣어도 맛있습니다." },
+    // 오므라이스의 실제 재료인 '케첩' 기반으로 대체 팁 수정![cite: 1]
+    { original: "케첩", alternatives: ["돈가스 소스", "토마토 소스"], note: "돈가스 소스를 볶음밥에 넣어도 묵직한 감칠맛이 납니다." },
   ],
   "덮밥": [
     { original: "굴소스", alternatives: ["간장+올리고당"], note: "굴소스가 없으면 간장 and 당류를 조합해보세요." },
   ],
   "카레라이스": [
-    { original: "돼지고기", alternatives: ["닭고기", "스팸"], note: "닭가슴살을 넣으면 담백한 카레가 됩니다." },
+    // 카레라이스의 실제 재료인 '카레가루' 기반으로 대체 팁 수정![cite: 1]
+    { original: "카레가루", alternatives: ["고형 카레", "짜장가루"], note: "고형 카레를 조각내서 넣거나, 짜장가루로 색다르게 짜장밥을 만들어도 좋습니다." },
   ],
   "비빔면": [
     { original: "고추장", alternatives: ["고춧가루+간장+올리고당"], note: "고추장이 없으면 고춧가루와 양념을 섞어 대체할 수 있어요." },
@@ -326,6 +329,37 @@ export const CATEGORIES = {
   grain: { name: "곡류·식사", emoji: "🍞" },
 };
 
+// 일반 레시피용 필요 수량 매핑 (형묵 요청, recommend.js의 cookingMethods 실제 계량 기준)
+// 키는 재료 이름이며, RECIPES 생성 시 실제 마스터 id로 자동 변환됩니다.
+const needAmountsByName = {
+  감자전: { 감자: "2개", 계란: "1개", 부침가루: "2큰술", 식용유: "2큰술" },
+  볶음밥: { 밥: "1공기", 계란: "1개", 양파: "1/4개", 당근: "1/4개", 식용유: "1큰술", 간장: "1큰술" },
+  오므라이스: { 밥: "1공기", 계란: "2개", 양파: "1/4개", 케첩: "2큰술", 식용유: "1큰술" },
+  덮밥: { 밥: "1공기", 돼지고기: "150g", 양파: "1/2개", 간장: "1큰술", 굴소스: "1/2큰술" },
+  카레라이스: { 밥: "1공기", 감자: "1개", 당근: "1/3개", 양파: "1/2개", 카레가루: "3큰술" },
+  비빔면: { 국수: "1인분", 고추장: "2큰술", 식초: "1/2큰술", 설탕: "1/2큰술", 오이: "1/3개" },
+  "알리오 올리오": { 스파게티면: "100g", 마늘: "4쪽", 올리브유: "3큰술", 소금: "1작은술", 후추: "약간" },
+  토마토파스타: { 스파게티면: "100g", 토마토소스: "200g", 마늘: "2쪽", 양파: "1/4개", 올리브유: "1큰술" },
+  볶음우동: { 우동면: "1인분", 양배추: "1/8개", 당근: "1/4개", 굴소스: "1큰술", 식용유: "1큰술" },
+  우동: { 우동면: "1인분", 다시다: "1/2작은술", 대파: "1/3대", 간장: "1큰술" },
+  잔치국수: { 국수: "1인분", 다시다: "1작은술", 대파: "약간", 간장: "1큰술", 계란: "1개" },
+  비빔국수: { 국수: "1인분", 고추장: "2큰술", 식초: "1큰술", 설탕: "1큰술", 오이: "1/3개" },
+  김치찌개: { 김치: "1컵", 돼지고기: "150g", 두부: "1/2모", 대파: "약간", 고춧가루: "1/2큰술" },
+  된장찌개: { 된장: "1큰술", 두부: "1/2모", 애호박: "1/4개", 감자: "1/2개", 양파: "1/4개" },
+  순두부찌개: { 순두부: "1봉", 고춧가루: "1큰술", 대파: "약간", 마늘: "1/2큰술", 계란: "1개" },
+  부대찌개: { 스팸: "100g", 김치: "1/2컵", 소시지: "100g", 고춧가루: "1큰술", 대파: "약간" },
+  미역국: { 미역: "1컵", 소고기: "100g", 참기름: "1큰술", 간장: "1큰술" },
+  계란국: { 계란: "2개", 대파: "약간", 다시다: "1/2작은술", 간장: "1큰술" },
+  햄야채볶음: { 스팸: "100g", 양파: "1/4개", 당근: "1/4개", 양배추: "1/8개", 굴소스: "1큰술" },
+  계란말이: { 계란: "3개", 소금: "1/3작은술", 당근: "약간", 대파: "약간" },
+  감자볶음: { 감자: "1개", 당근: "1/4개", 양파: "1/4개", 식용유: "1큰술", 소금: "1/3작은술" },
+  토스트: { 식빵: "2장", 계란: "1개", 설탕: "1/2큰술", 식용유: "1큰술" },
+  샌드위치: { 식빵: "2장", 계란: "2개", 양배추: "약간", 마요네즈: "2큰술" },
+  짜장면: { 국수: "1인분", 돼지고기: "150g", 양파: "1/2개", 춘장: "3큰술", 전분가루: "1큰술", 식용유: "2큰술" },
+  짬뽕: { 국수: "1인분", 돼지고기: "100g", 양파: "1/4개", 양배추: "1/8개", 고춧가루: "1큰술", 대파: "약간" },
+  탕수육: { 돼지고기: "200g", 전분가루: "4큰술", 당근: "1/4개", 오이: "1/4개", 식초: "2큰술", 설탕: "2큰술", 간장: "1큰술" },
+};
+
 export const RECIPES = csvRows.map((row, index) => {
   const fix = rowFixes[row.name] || {};
   const ingredients = row.ingredients.split(", ").map(name => name.trim());
@@ -338,6 +372,20 @@ export const RECIPES = csvRows.map((row, index) => {
       .match(/["']([^"']+)["']/g)
       ?.map((item) => item.slice(1, -1)) ||
     [];
+  const need = ingredients
+    .map(
+      (name) =>
+        INGREDIENTS.find((ingredient) => ingredient.name === name)?.id,
+    )
+    .filter(Boolean);
+  const needAmounts = Object.fromEntries(
+    Object.entries(needAmountsByName[row.name] || {})
+      .map(([name, amount]) => [
+        INGREDIENTS.find((ingredient) => ingredient.name === name)?.id,
+        amount,
+      ])
+      .filter(([id]) => Boolean(id)),
+  );
   return {
     id: `r${index + 1}`,
     name: row.name,
@@ -345,12 +393,8 @@ export const RECIPES = csvRows.map((row, index) => {
     emoji: fix.emoji || row.emoji,
     difficulty: row.difficulty,
     time: `${row.cook_time}분`,
-    need: ingredients
-      .map(
-        (name) =>
-          INGREDIENTS.find((ingredient) => ingredient.name === name)?.id,
-      )
-      .filter(Boolean),
+    need,
+    needAmounts,
     missing: [],
     aiReason: fix.aiReason || row.aiReason,
     ingredients,
@@ -361,9 +405,7 @@ export const RECIPES = csvRows.map((row, index) => {
   };
 });
 
-// ==========================================
-// [신규 기능 연동] ALTERNATIVE_RECIPES 내 needAmounts 수량 매핑 데이터 추가
-// ==========================================
+// ALTERNATIVE_RECIPES 내 needAmounts 수량 매핑 데이터 포함 상태
 export const ALTERNATIVE_RECIPES = [
   {
     id: "alt1",
@@ -371,7 +413,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍝",
     difficulty: "쉬움",
     time: "10분",
-    need: ["i43"], // 치즈
+    need: ["i43"],
     needAmounts: {
       i43: "1~2개"
     },
@@ -406,7 +448,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍙",
     difficulty: "쉬움",
     time: "5분",
-    need: ["i43", "i05"], // 치즈, 마요네즈(또는 김밥 내 참치마요 대체)
+    need: ["i43", "i05"],
     needAmounts: {
       i43: "1장",
       i05: "약간"
@@ -439,7 +481,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍜",
     difficulty: "쉬움",
     time: "8분",
-    need: ["i02", "i27"], // 계란, 대파
+    need: ["i02", "i27"],
     needAmounts: {
       i02: "1개",
       i27: "약간"
@@ -456,7 +498,7 @@ export const ALTERNATIVE_RECIPES = [
     steps: [
       "물 500ml에 라면 건더기/분말 스프와 함께 쌈장 반스푼을 풀고 물을 끓입니다.",
       "물이 끓으면 라면 면발을 넣고 4분간 꼬들하게 끓여냅니다.",
-      "마지막 1분 전, 어슷 썬 대파와 계란을 퐁당 깨뜨려 넣어 한소끔 끓여 마무리합니다.",
+      "마지막 1분 전, 어슷 썬 대파 and 계란을 퐁당 깨뜨려 넣어 한소끔 끓여 마무리합니다.",
     ],
     cookingSequence: ["🍜", "🧄", "🍳", "🔥"],
     priceList: [
@@ -473,7 +515,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍲",
     difficulty: "쉬움",
     time: "10분",
-    need: ["i43"], // 치즈
+    need: ["i43"],
     needAmounts: {
       i43: "2장"
     },
@@ -502,7 +544,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🥔",
     difficulty: "쉬움",
     time: "12분",
-    need: ["i43", "i44"], // 치즈, 베이컨
+    need: ["i43", "i44"],
     needAmounts: {
       i43: "1컵",
       i44: "약간"
@@ -536,7 +578,7 @@ export const ALTERNATIVE_RECIPES = [
     emoji: "🍞",
     difficulty: "쉬움",
     time: "7분",
-    need: ["i39", "i02", "i43"], // 식빵, 계란, 치즈
+    need: ["i39", "i02", "i43"],
     needAmounts: {
       i39: "1장",
       i02: "1개",

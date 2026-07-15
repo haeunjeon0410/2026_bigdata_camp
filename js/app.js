@@ -171,13 +171,18 @@ export function navigate(route, param) {
 
 // Update sorted carousel recipe lists relative to selections
 function calculateMissingIngredients(recipe) {
-  // 편의점 레시피는 need가 대표 재료 ID만 가지고 있어 기존 상세 missing 목록을 사용합니다.
-  if (
-    String(recipe?.id || "").startsWith("alt") &&
-    Array.isArray(recipe.missing) &&
-    recipe.missing.length
-  ) {
-    return [...recipe.missing];
+  // 편의점 레시피는 고정 구매 품목과 냉장고 부족 재료를 함께 표시합니다.
+  if (String(recipe?.id || "").startsWith("alt")) {
+    const fixedMissing = Array.isArray(recipe.missing) ? recipe.missing : [];
+    const missingFromNeed = (recipe.need || [])
+      .filter((ingredientId) => !state.selected.has(ingredientId))
+      .map(
+        (ingredientId) =>
+          INGREDIENTS.find((ingredient) => ingredient.id === ingredientId)
+            ?.name || ingredientId,
+      );
+
+    return [...new Set([...fixedMissing, ...missingFromNeed])];
   }
 
   const need = recipe.need || [];
@@ -594,6 +599,17 @@ function renderFridge() {
           <div class="fridge-leg-pin"></div>
         </div>
       </div>
+
+      <aside class="receipt-import-card" aria-label="영수증으로 냉장고 채우기">
+        <span class="receipt-import-pin" aria-hidden="true">📌</span>
+        <span class="receipt-import-emoji" aria-hidden="true">🧾</span>
+        <strong>장본 재료가 많나요?</strong>
+        <p>영수증 사진을 올리면 재료를<br />한 번에 정리해 드려요.</p>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-receipt-upload">
+          영수증 업로드
+        </button>
+        <small>JPG · PNG · WEBP</small>
+      </aside>
 
       <!-- 냉장고 우측에서 냉장고를 직시하며 굶주리는 토끼 배치 (업사이징 및 간소화 텍스트) -->
       <div class="fridge-hungry-bunny-wrap">
@@ -1401,15 +1417,24 @@ export function showCreditsModal() {
 // 기능별 모듈 초기화 실행 (순환 참조 방지를 위해 비동기 동적 임포트 사용)
 Promise.all([
   import("./ingredient.js"),
+  import("./receipt.js"),
   import("./recommend.js"),
   import("./recipe.js"),
   import("./favorite.js"),
   import("./shopping.js"),
 ]).then(
-  ([ingredientMod, recommendMod, recipeMod, favoriteMod, shoppingMod]) => {
+  ([
+    ingredientMod,
+    receiptMod,
+    recommendMod,
+    recipeMod,
+    favoriteMod,
+    shoppingMod,
+  ]) => {
     normalizeSubstituteTips = recipeMod.normalizeSubstituteTips || (() => []);
     renderSubstituteTips = recipeMod.renderSubstituteTips || (() => "");
     ingredientMod.initIngredient();
+    receiptMod.initReceipt();
     recommendMod.initRecommend();
     recipeMod.initRecipe();
     favoriteMod.initFavorite();

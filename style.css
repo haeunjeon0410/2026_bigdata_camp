@@ -493,11 +493,100 @@ h4 {
 
 /* 3D Compact Refrigerator Layout */
 .interactive-fridge-container {
+  position: relative;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 4px 0;
+}
+
+/* Receipt upload note beside the refrigerator */
+.receipt-import-card {
+  position: absolute;
+  top: 138px;
+  left: 24px;
+  width: 200px;
+  padding: 22px 16px 14px;
+  border: 2px dashed var(--color-charcoal);
+  border-radius: 4px 16px 8px 14px;
+  background: #fff8c9;
+  box-shadow: 4px 5px 0 var(--color-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  transform: rotate(-2deg);
+  z-index: 4;
+  transition: opacity 0.2s ease, transform 0.25s ease;
+}
+
+.interactive-fridge.fridge-open ~ .receipt-import-card {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-28px) rotate(-5deg) scale(0.94);
+  z-index: 0;
+}
+
+.receipt-import-card::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 32px;
+  height: 32px;
+  border-radius: 0 0 7px;
+  background: linear-gradient(135deg, transparent 49%, #eadf9e 50%);
+  pointer-events: none;
+}
+
+.receipt-import-pin {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  font-size: 22px;
+  transform: translateX(-50%) rotate(8deg);
+  filter: drop-shadow(1px 2px 0 var(--color-shadow));
+}
+
+.receipt-import-emoji {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.receipt-import-card strong {
+  font-family: var(--font-hand);
+  font-size: 17px;
+  line-height: 1.1;
+  letter-spacing: -0.4px;
+  white-space: nowrap;
+}
+
+.receipt-import-card p {
+  color: var(--color-charcoal);
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.receipt-import-card .btn {
+  width: 100%;
+  padding-inline: 8px !important;
+  font-size: 11px !important;
+  transform: rotate(1deg);
+}
+
+.receipt-import-card .btn:hover {
+  transform: translateY(-2px) rotate(1deg);
+}
+
+.receipt-import-card small {
+  color: var(--color-gray);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
 .interactive-fridge {
@@ -961,6 +1050,129 @@ h4 {
 .interactive-fridge .ingredient-sticker.selected .sticker-chk {
   transform: scale(1) !important;
   opacity: 1 !important;
+}
+
+/* Dynamically rendered ingredient search/category results */
+.ingredient-search-results {
+  width: min(100%, 720px);
+  margin: 18px auto 0;
+  padding: 16px;
+  border: var(--border-thin);
+  border-radius: var(--br-md);
+  background: var(--color-cream-light);
+  box-shadow: 3px 3px 0 var(--color-charcoal);
+}
+
+.ingredient-search-results:empty {
+  display: none;
+}
+
+.ingredient-search-results .search-results-title,
+.ingredient-search-results .category-results-title {
+  margin-bottom: 10px;
+  color: var(--color-charcoal);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.ingredient-candidate-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+/* Search results are outside .interactive-fridge, so share its sticker styling. */
+.ingredient-search-results .ingredient-sticker {
+  position: relative;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: var(--br-sm);
+  background: var(--color-white);
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  color: var(--color-charcoal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transform: rotate(var(--tilt, 0deg));
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.25);
+}
+
+.ingredient-search-results .ingredient-sticker:hover {
+  background: var(--color-mint-light);
+  transform: scale(1.06) rotate(0deg);
+}
+
+.ingredient-search-results .ingredient-sticker.selected {
+  background: #E8F8F2;
+  border-color: var(--color-mint);
+  box-shadow: 2px 2px 0 var(--color-mint-deep);
+}
+
+.ingredient-search-results .sticker-emoji {
+  font-size: 15px;
+}
+
+.ingredient-search-results .sticker-name {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ingredient-search-results .sticker-chk {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: 50%;
+  background: var(--color-orange);
+  color: var(--color-white);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  font-weight: 800;
+  box-shadow: 1px 1px 0 var(--color-charcoal);
+}
+
+.custom-ingredient-add,
+.custom-ingredient-delete {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.custom-ingredient-add {
+  background: var(--color-orange);
+  color: var(--color-white);
+  box-shadow: 2px 2px 0 var(--color-orange-deep);
+}
+
+.custom-ingredient-delete {
+  background: var(--color-orange-light);
+  color: var(--color-orange-deep);
+  box-shadow: 1.5px 1.5px 0 var(--color-charcoal);
+}
+
+.custom-ingredient-add:hover,
+.custom-ingredient-delete:hover {
+  transform: translateY(-1px);
+}
+
+.ingredient-search-results .empty-message {
+  padding: 8px;
+  color: var(--color-gray);
+  font-size: 13px;
+  text-align: center;
 }
 
 /* Compact bottom actions bar for My Fridge */
@@ -1848,7 +2060,7 @@ h4 {
   opacity: 0;
   pointer-events: none;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25);
-  z-index: 1000;
+  z-index: 2000;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   border: var(--border-thin);
   white-space: nowrap;
@@ -2019,6 +2231,473 @@ h4 {
 
 .custom-modal-overlay.show .custom-modal-content {
   transform: translateY(0);
+}
+
+/* Receipt analysis modal */
+.receipt-modal-overlay {
+  padding: 24px;
+}
+
+.receipt-modal-content {
+  width: min(700px, 94vw);
+  max-width: 700px;
+  max-height: 88vh;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.receipt-modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-right: 24px;
+}
+
+.receipt-modal-emoji {
+  width: 52px;
+  height: 52px;
+  border: var(--border-thin);
+  border-radius: 50%;
+  background: var(--color-mint-light);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 28px;
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+}
+
+.receipt-modal-heading h3 {
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.receipt-modal-heading p {
+  margin-top: 3px;
+  color: var(--color-gray);
+  font-size: 12px;
+}
+
+.receipt-progress {
+  width: min(100%, 500px);
+  margin: 20px auto 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  list-style: none;
+}
+
+.receipt-progress li {
+  position: relative;
+  color: var(--color-gray);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.receipt-progress li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 15px);
+  width: calc(100% - 30px);
+  height: 3px;
+  border-radius: 99px;
+  background: var(--color-gray-light);
+}
+
+.receipt-progress li.active:not(:last-child)::after {
+  background: var(--color-mint);
+}
+
+.receipt-progress li span {
+  width: 28px;
+  height: 28px;
+  border: var(--border-thin);
+  border-radius: 50%;
+  background: var(--color-white);
+  color: var(--color-gray);
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  box-shadow: 1.5px 1.5px 0 var(--color-charcoal);
+}
+
+.receipt-progress li.active {
+  color: var(--color-charcoal);
+}
+
+.receipt-progress li.active span {
+  background: var(--color-mint);
+  color: var(--color-white);
+}
+
+.receipt-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 3px 5px 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.receipt-drop-zone {
+  min-height: 290px;
+  padding: 28px 22px;
+  border: 3px dashed var(--color-mint-deep);
+  border-radius: var(--br-md);
+  background: var(--color-mint-light);
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.receipt-drop-zone:hover,
+.receipt-drop-zone:focus-visible,
+.receipt-drop-zone.is-dragging {
+  background: #d9f3e9;
+  transform: translateY(-2px);
+}
+
+.receipt-drop-zone:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-orange-light);
+}
+
+.receipt-drop-icon {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(2px 3px 0 var(--color-shadow));
+}
+
+.receipt-drop-zone strong {
+  font-size: 18px;
+}
+
+.receipt-drop-zone p {
+  max-width: 380px;
+  color: var(--color-gray);
+  font-size: 12px;
+  word-break: keep-all;
+}
+
+.receipt-drop-zone .btn {
+  margin-top: 4px;
+  min-width: 150px;
+}
+
+.receipt-drop-zone small {
+  color: var(--color-gray);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.receipt-preview-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.receipt-preview-frame {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  padding: 12px;
+  border: var(--border-thin);
+  border-radius: var(--br-md);
+  background-color: var(--color-gray-light);
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.5) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.5) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.5) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.5) 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 5px var(--color-shadow);
+}
+
+.receipt-preview-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.receipt-preview-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 253, 249, 0.78);
+  display: grid;
+  place-items: center;
+}
+
+.receipt-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid var(--color-mint-light);
+  border-top-color: var(--color-orange);
+  border-radius: 50%;
+  animation: receiptSpin 0.8s linear infinite;
+}
+
+@keyframes receiptSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.receipt-file-info {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--color-cream-dark);
+  border-radius: var(--br-sm);
+  background: var(--color-cream-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11px;
+}
+
+.receipt-file-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-file-info span {
+  color: var(--color-gray);
+  flex: 0 0 auto;
+}
+
+.receipt-analyzing-copy {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.receipt-analyzing-copy strong {
+  font-size: 16px;
+}
+
+.receipt-analyzing-copy p {
+  margin-top: 4px;
+  color: var(--color-gray);
+  font-size: 11px;
+}
+
+.receipt-modal-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.receipt-modal-actions .btn {
+  flex: 1;
+  max-width: 230px;
+}
+
+.receipt-demo-notice {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1.5px dashed var(--color-orange-deep);
+  border-radius: var(--br-sm);
+  background: var(--color-orange-light);
+  color: var(--color-orange-deep);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.receipt-result-summary {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.receipt-result-summary strong {
+  font-size: 17px;
+}
+
+.receipt-result-summary span {
+  color: var(--color-gray);
+  font-size: 11px;
+}
+
+.receipt-result-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow-y: auto;
+  scrollbar-color: var(--color-cream-dark) transparent;
+  scrollbar-width: thin;
+}
+
+.receipt-result-item {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border: var(--border-thin);
+  border-radius: var(--br-sm);
+  background: var(--color-mint-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--color-charcoal);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.receipt-result-item:hover {
+  transform: translateY(-1px);
+}
+
+.receipt-result-item.unmatched {
+  background: var(--color-gray-light);
+  color: var(--color-gray);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.receipt-result-item input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--color-orange);
+}
+
+.receipt-result-emoji {
+  width: 30px;
+  flex: 0 0 auto;
+  font-size: 23px;
+  text-align: center;
+}
+
+.receipt-result-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.receipt-result-copy strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-result-copy small {
+  color: var(--color-mint-deep);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.receipt-result-item.unmatched .receipt-result-copy small {
+  color: var(--color-gray);
+}
+
+.receipt-quantity {
+  padding: 3px 8px;
+  border: 1.5px solid var(--color-charcoal);
+  border-radius: 99px;
+  background: var(--color-white);
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.receipt-error-box {
+  min-height: 240px;
+  padding: 26px;
+  border: 2px dashed var(--color-alert-text);
+  border-radius: var(--br-md);
+  background: var(--color-alert-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.receipt-result-actions {
+  flex: 0 0 auto;
+}
+
+.receipt-error-box > span {
+  font-size: 44px;
+}
+
+.receipt-error-box strong {
+  color: var(--color-alert-text);
+  font-size: 17px;
+}
+
+.receipt-error-box p {
+  color: var(--color-alert-text);
+  font-size: 12px;
+}
+
+@media (max-width: 767px) {
+  .interactive-fridge-container {
+    flex-direction: column;
+  }
+
+  .receipt-import-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: min(100%, 355px);
+    margin: 0 auto 24px;
+    transform: rotate(-1deg);
+  }
+
+  .receipt-modal-overlay {
+    padding: 12px;
+  }
+
+  .receipt-modal-content {
+    width: 100%;
+    padding: 22px 16px 18px;
+  }
+
+  .receipt-modal-heading {
+    justify-content: flex-start;
+  }
+
+  .receipt-preview-frame {
+    height: 230px;
+  }
 }
 
 .modal-close {
