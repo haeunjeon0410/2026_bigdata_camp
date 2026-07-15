@@ -54,16 +54,20 @@ Deno.serve(async (req: Request) => {
     const base64Image = btoa(binary);
     const mimeType = receiptFile.type || "image/jpeg";
 
-    const prompt = `이 영수증 이미지를 분석해서 구매한 식재료 항목을 추출해줘.
+    const prompt = `너는 영수증 OCR 분석기다. 이미지에 실제로 보이는 글자만 읽고 구매 상품을 추출해.
 
-각 항목마다 다음 정보를 포함해:
-- rawName: 영수증에 실제로 인쇄된 원본 상품명 그대로
-- normalizedName: 일반적으로 통용되는 재료 이름으로 정규화한 이름 (예: "신선대란 10입" -> "계란")
-- quantity: 수량 (예: "1팩", "2개", "500g")
+중요한 규칙:
+1. 영수증의 상품명은 위에서 아래 순서대로 빠짐없이 읽어라.
+2. 글자가 불명확하면 추측하거나 비슷한 상품으로 바꾸지 말고, 보이는 부분을 rawName에 그대로 적어라.
+3. rawName은 영수증에 인쇄된 상품명을 최대한 그대로 적어라. 브랜드명과 규격도 유지해라.
+4. normalizedName은 실제 상품을 대표하는 일반 재료명으로만 정규화해라.
+   예: "신선대란 10입" -> "계란", "서울우유 1L" -> "우유", "감자칩" -> "감자칩".
+   상품을 다른 재료로 바꾸거나, 이미지에 없는 재료를 만들어내지 마라.
+5. quantity는 영수증에 표시된 수량/중량을 적고, 없으면 빈 문자열로 둬라.
+6. 비닐봉투, 배송비, 할인, 포인트, 결제금액 같은 비식품 항목은 제외해라.
 
-식재료가 아닌 항목(비닐봉투, 배송비, 할인, 포인트 적립 등)은 제외해줘.
-반드시 아래 JSON 형식으로만 응답하고, 다른 설명은 붙이지 마:
-{"items": [{"rawName": "...", "normalizedName": "...", "quantity": "..."}]}`;
+반드시 아래 JSON 형식으로만 응답해:
+{"items": [{"rawName": "실제 상품명", "normalizedName": "일반 재료명", "quantity": "수량 또는 중량"}]}`;
 
     const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -73,6 +77,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        temperature: 0,
         messages: [
           {
             role: "user",
@@ -80,7 +85,10 @@ Deno.serve(async (req: Request) => {
               { type: "text", text: prompt },
               {
                 type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${base64Image}` },
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`,
+                  detail: "high",
+                },
               },
             ],
           },

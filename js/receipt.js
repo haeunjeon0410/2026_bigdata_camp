@@ -4,7 +4,8 @@ import {
   state,
   updateCarouselRecipes,
 } from "./app.js";
-import { INGREDIENTS } from "./data.js";
+import { INGREDIENTS, registerIngredient } from "./data.js";
+import { analyzeReceipt } from "./supabase.js";
 
 const MAX_RECEIPT_SIZE = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -70,15 +71,16 @@ function getReceiptEndpoint() {
   );
 }
 
-const ingredientIndex = INGREDIENTS.map((ingredient) => ({
-  ...ingredient,
-  normalizedName: normalizeText(ingredient.name),
-})).sort((a, b) => b.normalizedName.length - a.normalizedName.length);
 const ingredientAliasIndex = [...ingredientAliases.entries()].sort(
   ([aliasA], [aliasB]) => aliasB.length - aliasA.length,
 );
 
 function findMatchingIngredient(...names) {
+  const ingredientIndex = INGREDIENTS.map((ingredient) => ({
+    ...ingredient,
+    normalizedName: normalizeText(ingredient.name),
+  })).sort((a, b) => b.normalizedName.length - a.normalizedName.length);
+
   for (const name of names) {
     const normalizedName = normalizeText(name);
     if (!normalizedName) continue;
@@ -97,12 +99,8 @@ function findMatchingIngredient(...names) {
       );
       if (exactMatch) return exactMatch;
 
-      const containedMatch = ingredientIndex.find(
-        (ingredient) =>
-          ingredient.normalizedName.length >= 2 &&
-          candidate.includes(ingredient.normalizedName),
-      );
-      if (containedMatch) return containedMatch;
+      // 상품명에 재료명이 포함됐다는 이유만으로 매칭하지 않습니다.
+      // 예: 양파즙/감자칩처럼 다른 상품을 원재료로 오인하는 것을 방지합니다.
     }
   }
 
@@ -405,27 +403,17 @@ function waitForDemo(signal) {
 }
 
 async function requestReceiptAnalysis(file, signal) {
-  const endpoint = getReceiptEndpoint();
-  if (!endpoint) {
-    await waitForDemo(signal);
-    return { items: createDemoAnalysisItems(), isDemo: true };
+  if (signal.aborted) {
+    throw new DOMException("영수증 분석이 취소되었습니다.", "AbortError");
   }
 
-  const formData = new FormData();
-  formData.append("receipt", file, file.name);
-  // Backend response: { items: [{ rawName, normalizedName, quantity }] }
-  const response = await fetch(endpoint, {
-    method: "POST",
-    body: formData,
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`분석 서버가 요청을 처리하지 못했습니다. (${response.status})`);
+  // Supabase Edge Function(analyze-receipt)으로 실제 영수증 이미지를 전송합니다.
+  const result = await analyzeReceipt(file);
+  if (!Array.isArray(result?.items) || result.items.length === 0) {
+    throw new Error("Supabase 영수증 분석 결과가 비어 있습니다.");
   }
 
-  const payload = await response.json();
-  return { items: payload.items, isDemo: false };
+  return { items: result.items, isDemo: false };
 }
 
 function normalizeAnalysisItems(items) {
@@ -442,7 +430,10 @@ function normalizeAnalysisItems(items) {
     const normalizedName = clampText(item.normalizedName || item.ingredientName);
     if (!rawName && !normalizedName) return;
 
-    const ingredient = findMatchingIngredient(normalizedName, rawName);
+    let ingredient = findMatchingIngredient(normalizedName, rawName);
+    if (!ingredient && normalizedName) {
+      ingredient = registerIngredient(normalizedName);
+    }
     const dedupeKey = ingredient?.id || normalizeText(normalizedName || rawName);
     if (!dedupeKey || usedKeys.has(dedupeKey)) return;
     usedKeys.add(dedupeKey);

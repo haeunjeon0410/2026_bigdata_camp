@@ -110,9 +110,9 @@ export async function analyzeReceipt(imageFile) {
     });
 
     if (error) throw error;
-    return { items: data?.items ?? [] };
+    return { items: data?.items ?? [], isDemo: false };
   } catch (err) {
     console.error('❌ [Supabase] 영수증 분석 실패:', err.message);
-    return { items: [] };
+    throw err;
   }
 }
