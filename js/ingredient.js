@@ -157,6 +157,23 @@ function addCustomIngredient(category) {
   return true;
 }
 
+function deleteCustomIngredient(id) {
+  const customIngredients = loadCustomIngredients();
+  const index = customIngredients.findIndex((ingredient) => ingredient.id === id);
+  if (index === -1) return false;
+
+  const ingredientName = customIngredients[index].name;
+  customIngredients.splice(index, 1);
+  if (!saveCustomIngredients(customIngredients)) return false;
+
+  state.selected.delete(id);
+  saveSelectedIngredients();
+  render();
+  updateCarouselRecipes();
+  showToast(`${ingredientName}을(를) 영구 삭제했어요.`);
+  return true;
+}
+
 function applyIngredientVisibility() {
   document
     .querySelectorAll(
@@ -349,7 +366,7 @@ function updateSearchResults() {
     const stickers = results
       .map(
         (ingredient) => `
-      <div class="ingredient-sticker ${state.selected.has(ingredient.id) ? "selected" : ""}"
+      <div class="ingredient-sticker ${state.selected.has(ingredient.id) ? "selected" : ""} ${ingredient.isCustom ? "is-custom" : ""}"
            data-search-result="true"
            data-ing="${escapeHtml(ingredient.id)}"
            role="checkbox"
@@ -358,6 +375,7 @@ function updateSearchResults() {
         <span class="sticker-chk">✔</span>
         <span class="sticker-emoji">${escapeHtml(ingredient.emoji)}</span>
         <span class="sticker-name">${escapeHtml(ingredient.name)}</span>
+        ${ingredient.isCustom ? `<button type="button" class="btn-delete-custom" data-id="${escapeHtml(ingredient.id)}" aria-label="삭제" title="재료 삭제">×</button>` : ""}
       </div>
     `,
       )
@@ -405,8 +423,16 @@ export function initIngredient() {
   updateSearchResults();
 
   document.addEventListener("fridge:ingredients-added", refreshIngredientView);
+  document.addEventListener("fridge:rendered", refreshIngredientView);
 
   document.addEventListener("click", (event) => {
+    const deleteBtn = event.target.closest(".btn-delete-custom");
+    if (deleteBtn) {
+      const id = deleteBtn.dataset.id;
+      deleteCustomIngredient(id);
+      return;
+    }
+
     const fridgeEntry = event.target.closest(
       '[data-nav="fridge"], #btn-start-fridge',
     );

@@ -11,8 +11,19 @@ const SELECTED_INGREDIENTS_KEY = "selectedIngredients";
 function loadSelectedIngredients() {
   try {
     const saved = JSON.parse(localStorage.getItem(SELECTED_INGREDIENTS_KEY) || "[]");
+    const customIngredients = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("customIngredients") || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const validIds = new Set([
+      ...INGREDIENTS.map((ing) => ing.id),
+      ...customIngredients.map((ing) => ing.id)
+    ]);
     return Array.isArray(saved)
-      ? new Set(saved.filter((id) => typeof id === "string" && id.trim()))
+      ? new Set(saved.filter((id) => typeof id === "string" && id.trim() && validIds.has(id)))
       : new Set();
   } catch {
     return new Set();
@@ -152,14 +163,44 @@ export function navigate(route, param) {
         console.warn("도감 조리 횟수 저장 실패:", err);
       }
 
-      // 조리 완료 시 해당 요리에 들어간 식재료(need)를 state.selected에서 자동 삭제 차감
+      // 조리 완료 시 해당 요리에 들어간 식재료를 state.selected에서 자동 삭제 차감 (매칭 기반 삭제)
       let recipe = RECIPES.find((r) => r.id === param);
       if (!recipe) recipe = ALTERNATIVE_RECIPES.find((r) => r.id === param);
-      if (recipe && recipe.need) {
-        recipe.need.forEach((ingId) => {
-          state.selected.delete(ingId);
+      if (recipe) {
+        const normalize = (val) => String(val || '').trim().replace(/[\d().,/~%g·]/g, ' ').replace(/(개|팩|봉|병|캔|장|인분|그램|g|ml|kg|L|약간|작은술|큰술)/gi, ' ').replace(/\s+/g, '').toLowerCase();
+        const recipeNeeds = [
+          ...(recipe.ingredients || []),
+          ...(recipe.need || []).map((id) => {
+            const ing = INGREDIENTS.find((i) => i.id === id);
+            return ing ? ing.name : '';
+          }),
+          ...(recipe.missing || [])
+        ].map(normalize).filter(Boolean);
+
+        const customIngredients = (() => {
+          try {
+            return JSON.parse(localStorage.getItem("customIngredients") || "[]");
+          } catch {
+            return [];
+          }
+        })();
+        const allAvailableIngredients = [...INGREDIENTS, ...customIngredients];
+
+        [...state.selected].forEach((selectedId) => {
+          const ing = allAvailableIngredients.find((i) => i.id === selectedId);
+          if (ing) {
+            const ingNorm = normalize(ing.name);
+            const isMatched = recipeNeeds.some((needName) => 
+              ingNorm.includes(needName) || needName.includes(ingNorm)
+            );
+            if (isMatched) {
+              state.selected.delete(selectedId);
+            }
+          }
         });
+
         saveSelectedIngredients();
+        updateCarouselRecipes();
       }
     }
   }

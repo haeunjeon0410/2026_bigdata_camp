@@ -4,8 +4,8 @@
 //------------------------------------
 /* 추천 기능 모듈 */
 
-import { state, showToast, render, navigate, updateCarouselRecipes } from './app.js';
-import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
+import { state, showToast, render, navigate, updateCarouselRecipes, saveSelectedIngredients } from './app.js';
+import { RECIPES, ALTERNATIVE_RECIPES, INGREDIENTS } from './data.js';
 
 // 추천 화면에서만 사용하는 취향 상태입니다. app.js의 state 구조는 변경하지 않습니다.
 const selectedPreferences = new Set();
@@ -15,6 +15,427 @@ let recipePage = 1;
 let isSearchComposing = false;
 let searchRefreshTimer = null;
 let activeDifficultyFilter = 'all';
+const RECEIPT_MEMORY_KEY = 'bigdataCamp.receiptMemory.v1';
+const RECEIPT_ANALYSIS_MEMORY_KEY = 'bigdataCamp.receiptAnalyses.v1';
+const RECEIPT_IMAGE_DB_NAME = 'bigdataCamp.receiptImages.v1';
+const RECEIPT_IMAGE_STORE = 'receipts';
+let receiptAttachedAt = null;
+let receiptMemoryObserver = null;
+let receiptImageDbPromise = null;
+let receiptImageObjectUrls = [];
+let suppressNextReceiptImageSave = false;
+let activeReceiptImageId = null;
+
+export function getActiveReceiptImageId() {
+  return activeReceiptImageId;
+}
+
+const ingredientShelfLifeDays = [
+  { pattern: /생선|회|새우|조개|해산물/, days: 2 },
+  { pattern: /돼지고기|소고기|닭고기|고기|불고기|햄|소시지/, days: 3 },
+  { pattern: /두부|우유|계란|치즈|요거트|유제품/, days: 7 },
+  { pattern: /김치|장아찌|피클/, days: 30 },
+  { pattern: /대파|양파|감자|당근|양배추|애호박|채소|과일/, days: 7 },
+  { pattern: /밥|식빵|빵|국수|우동|파스타|면/, days: 5 }
+];
+
+function readReceiptMemory() {
+  try {
+    const analyses = JSON.parse(localStorage.getItem(RECEIPT_ANALYSIS_MEMORY_KEY) || '[]');
+    if (Array.isArray(analyses) && analyses.length) {
+      return analyses
+        .filter((analysis) => Array.isArray(analysis.items) && analysis.items.length)
+        .sort(compareReceiptAnalyses)[0] || { items: [] };
+    }
+    const value = JSON.parse(localStorage.getItem(RECEIPT_MEMORY_KEY) || 'null');
+    return value && Array.isArray(value.items) ? value : { items: [] };
+  } catch {
+    return { items: [] };
+  }
+}
+
+function getReceiptAnalysisTime(analysis) {
+  const time = new Date(analysis?.purchaseDate || analysis?.attachedAt).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function compareReceiptAnalyses(left, right) {
+  return getReceiptAnalysisTime(right) - getReceiptAnalysisTime(left)
+    || new Date(right?.attachedAt || 0).getTime() - new Date(left?.attachedAt || 0).getTime();
+}
+
+function readReceiptAnalyses() {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECEIPT_ANALYSIS_MEMORY_KEY) || '[]');
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeReceiptAnalyses(analyses) {
+  try { localStorage.setItem(RECEIPT_ANALYSIS_MEMORY_KEY, JSON.stringify(analyses)); } catch { /* 저장소가 없는 환경은 일회성 동작 */ }
+}
+
+function saveReceiptAnalysis(analysis) {
+  const analyses = readReceiptAnalyses().filter((item) => item.imageId !== analysis.imageId);
+  analyses.push(analysis);
+  writeReceiptAnalyses(analyses);
+}
+
+function deleteReceiptAnalysisForImage(imageId) {
+  if (!imageId) return;
+  const analyses = readReceiptAnalyses().filter((analysis) => analysis.imageId !== imageId);
+  writeReceiptAnalyses(analyses);
+  const latest = analyses
+    .filter((analysis) => Array.isArray(analysis.items) && analysis.items.length)
+    .sort(compareReceiptAnalyses)[0];
+  writeReceiptMemory(latest || { items: [] });
+  refreshReceiptInsights();
+}
+
+function deleteReceiptAnalysisItem(itemId) {
+  const storedAnalyses = readReceiptAnalyses();
+  let deletedItemName = '';
+
+  const findItemName = (items) => {
+    const found = items.find((item) => (item.id || item.name) === itemId);
+    return found ? found.name : '';
+  };
+
+  if (!storedAnalyses.length) {
+    const legacyMemory = readReceiptMemory();
+    deletedItemName = findItemName(legacyMemory.items);
+    legacyMemory.items = legacyMemory.items.filter((item) => (item.id || item.name) !== itemId);
+    writeReceiptMemory(legacyMemory);
+  } else {
+    for (const analysis of storedAnalyses) {
+      const name = findItemName(analysis.items);
+      if (name) {
+        deletedItemName = name;
+        break;
+      }
+    }
+    const analyses = storedAnalyses.map((analysis) => ({
+      ...analysis,
+      items: analysis.items.filter((item) => (item.id || item.name) !== itemId),
+    })).filter((analysis) => analysis.items.length);
+    writeReceiptAnalyses(analyses);
+    const latest = analyses.sort(compareReceiptAnalyses)[0];
+    if (latest) writeReceiptMemory(latest);
+    else writeReceiptMemory({ items: [] });
+  }
+
+  if (deletedItemName) {
+    const norm = normalizeReceiptMatchText(deletedItemName);
+    if (norm) {
+      const matched = INGREDIENTS.find((ingredient) => {
+        const ingNorm = normalizeReceiptMatchText(ingredient.name);
+        return norm.includes(ingNorm) || ingNorm.includes(norm);
+      });
+      if (matched && state.selected.has(matched.id)) {
+        state.selected.delete(matched.id);
+        saveSelectedIngredients();
+        updateCarouselRecipes();
+      }
+    }
+  }
+
+  refreshReceiptInsights();
+}
+
+function refreshReceiptInsights() {
+  document.querySelectorAll('[data-receipt-insight]').forEach((section) => section.remove());
+  decorateDetailPage();
+}
+
+function writeReceiptMemory(memory) {
+  try { localStorage.setItem(RECEIPT_MEMORY_KEY, JSON.stringify(memory)); } catch { /* 저장소가 없는 환경은 일회성 동작 */ }
+}
+
+function openReceiptImageDb() {
+  if (receiptImageDbPromise) return receiptImageDbPromise;
+  receiptImageDbPromise = new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) return reject(new Error('IndexedDB is not supported'));
+    const request = indexedDB.open(RECEIPT_IMAGE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(RECEIPT_IMAGE_STORE)) {
+        request.result.createObjectStore(RECEIPT_IMAGE_STORE, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  return receiptImageDbPromise;
+}
+
+function withReceiptImageStore(mode, callback) {
+  return openReceiptImageDb().then((db) => new Promise((resolve, reject) => {
+    const transaction = db.transaction(RECEIPT_IMAGE_STORE, mode);
+    const request = callback(transaction.objectStore(RECEIPT_IMAGE_STORE));
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  }));
+}
+
+function listStoredReceiptImages() {
+  return withReceiptImageStore('readonly', (store) => store.getAll())
+    .then((items) => items.sort((a, b) => b.createdAt - a.createdAt))
+    .catch(() => []);
+}
+
+function saveReceiptImage(file) {
+  const record = {
+    id: `receipt-image-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: file.name || '영수증 이미지',
+    type: file.type || 'image/jpeg',
+    size: file.size || 0,
+    blob: file,
+    createdAt: Date.now(),
+  };
+  activeReceiptImageId = record.id;
+  return withReceiptImageStore('readwrite', (store) => store.add(record))
+    .then(() => record)
+    .catch(() => null);
+}
+
+function deleteStoredReceiptImage(id) {
+  return withReceiptImageStore('readwrite', (store) => store.delete(id)).catch(() => null);
+}
+
+function clearStoredReceiptImages() {
+  return withReceiptImageStore('readwrite', (store) => store.clear()).catch(() => null);
+}
+
+function renderReceiptImageHistory(items) {
+  receiptImageObjectUrls = [];
+  if (!items.length) return '<li class="receipt-history-empty">기억하고 있는 영수증이 없습니다.</li>';
+  return items.map((item) => {
+    const url = URL.createObjectURL(item.blob);
+    receiptImageObjectUrls.push(url);
+    const date = new Date(item.createdAt);
+    const dateText = Number.isNaN(date.getTime()) ? '' : `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+    return `<li class="receipt-history-item">
+      <button type="button" data-receipt-history-select="${escapeHtml(item.id)}" title="${escapeHtml(item.name)}" class="receipt-history-preview">
+        <img src="${url}" alt="" />
+        <span>${escapeHtml(item.name)}<small style="display:block; opacity:.65;">${dateText}</small></span>
+      </button>
+      <button type="button" class="receipt-history-delete" data-receipt-history-delete="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.name)} 삭제" title="삭제">×</button>
+    </li>`;
+  }).join('');
+}
+
+function ensureReceiptHistoryPanel() {
+  const modal = document.querySelector('#receipt-modal.show');
+  const content = modal?.querySelector('.receipt-modal-content');
+  if (!content || content.querySelector('[data-receipt-history-panel]')) return;
+  const panel = document.createElement('div');
+  panel.dataset.receiptHistoryPanel = 'true';
+  panel.className = 'receipt-history-bar';
+  panel.innerHTML = '<button type="button" class="btn btn-outline receipt-history-open" data-receipt-history-open aria-label="첨부된 영수증 목록 크게 보기">첨부된 영수증 목록</button>';
+  content.insertBefore(panel, content.querySelector('.receipt-modal-heading'));
+}
+
+function closeReceiptLibrary() {
+  document.querySelector('[data-receipt-history-library]')?.remove();
+  receiptImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  receiptImageObjectUrls = [];
+}
+
+function renderReceiptLibrary(items, selectedId) {
+  const overlay = document.querySelector('[data-receipt-history-library]');
+  if (!overlay) return;
+  receiptImageObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  receiptImageObjectUrls = [];
+  const selected = items.find((item) => item.id === selectedId) || items[0];
+  const selectedUrl = selected ? URL.createObjectURL(selected.blob) : '';
+  if (selectedUrl) receiptImageObjectUrls.push(selectedUrl);
+  const itemList = items.length
+    ? items.map((item) => {
+      const url = URL.createObjectURL(item.blob);
+      receiptImageObjectUrls.push(url);
+      return `<li class="receipt-history-item ${item.id === selected?.id ? 'active' : ''}">
+        <button type="button" data-receipt-history-preview="${escapeHtml(item.id)}" class="receipt-history-preview">
+          <img src="${url}" alt="" />
+          <span>${escapeHtml(item.name)}</span>
+        </button>
+        <button type="button" class="receipt-history-delete" data-receipt-history-delete="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.name)} 삭제">×</button>
+      </li>`;
+    }).join('')
+    : '<li class="receipt-history-empty">기억하고 있는 영수증이 없습니다.</li>';
+  overlay.innerHTML = `<section class="custom-modal-content receipt-history-content" role="dialog" aria-modal="true" aria-labelledby="receipt-history-title">
+    <header class="receipt-history-header">
+      <div>
+        <h3 id="receipt-history-title">첨부된 영수증 목록</h3>
+        <p>저장된 영수증을 크게 확인하고 선택할 수 있어요.</p>
+      </div>
+      <div class="receipt-history-header-actions">
+        <button type="button" class="btn btn-outline" data-receipt-history-clear aria-label="저장된 영수증 전체 삭제">전체 삭제</button>
+        <button type="button" class="modal-close" data-receipt-history-close aria-label="영수증 목록 닫기">×</button>
+      </div>
+    </header>
+    <div class="receipt-history-layout">
+      <ul class="receipt-history-list">${itemList}</ul>
+      <div class="receipt-history-viewer">
+        ${selected ? `<img src="${selectedUrl}" alt="${escapeHtml(selected.name)} 크게 보기" /><strong>${escapeHtml(selected.name)}</strong><button type="button" class="btn btn-primary" data-receipt-history-select="${escapeHtml(selected.id)}">이 영수증 사용</button>` : '<p style="color:#777;">확인할 영수증을 선택해 주세요.</p>'}
+      </div>
+    </div>
+  </section>`;
+}
+
+function openReceiptLibrary() {
+  closeReceiptLibrary();
+  const overlay = document.createElement('div');
+  overlay.dataset.receiptHistoryLibrary = 'true';
+  overlay.className = 'custom-modal-overlay receipt-history-overlay show';
+  document.body.appendChild(overlay);
+  listStoredReceiptImages().then((items) => renderReceiptLibrary(items));
+}
+
+function selectStoredReceiptImage(id) {
+  listStoredReceiptImages().then((items) => {
+    const record = items.find((item) => item.id === id);
+    const input = document.querySelector('#receipt-modal.show #receipt-file-input');
+    if (!record || !input) return;
+    activeReceiptImageId = record.id;
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([record.blob], record.name, { type: record.type || 'image/jpeg' }));
+    input.files = transfer.files;
+    suppressNextReceiptImageSave = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    closeReceiptLibrary();
+  });
+}
+
+function refreshReceiptHistoryPanel() {
+  const panel = document.querySelector('#receipt-modal.show [data-receipt-history-panel]');
+  const list = panel?.querySelector('[data-receipt-history-list]');
+  if (!panel || !list) return;
+  listStoredReceiptImages().then((items) => {
+    if (panel.isConnected) list.innerHTML = renderReceiptImageHistory(items);
+  });
+}
+
+function captureReceiptResult() {
+  const modal = document.querySelector('#receipt-modal');
+  const rows = [...(modal?.querySelectorAll('.receipt-result-item') || [])];
+  if (!rows.length) return;
+
+  const previous = readReceiptMemory();
+  const capturedAt = receiptAttachedAt || new Date().toISOString();
+  const imageId = activeReceiptImageId || `receipt-session-${capturedAt}`;
+  const items = rows.map((row) => {
+    const text = row.textContent.replace(/\s+/g, ' ').trim();
+    const name = row.querySelector('.receipt-result-copy strong')?.textContent.trim() || text;
+    const quantity = row.querySelector('.receipt-quantity')?.textContent.trim() || '';
+    const sourceId = row.querySelector('[data-receipt-item-id]')?.getAttribute('data-receipt-item-id') || name;
+    const id = `${imageId}-${sourceId}`;
+    return { id, name, quantity, capturedAt };
+  }).filter((item) => item.name);
+
+  const purchaseDate = modal.querySelector('[data-receipt-date]')?.getAttribute('data-receipt-date')
+    || modal.querySelector('.receipt-date')?.textContent.match(/\d{4}[./-]\d{1,2}[./-]\d{1,2}/)?.[0]
+    || null;
+  const analysis = {
+    imageId,
+    attachedAt: capturedAt,
+    purchaseDate,
+    items,
+  };
+  saveReceiptAnalysis(analysis);
+  writeReceiptMemory(analysis);
+}
+
+function startReceiptMemoryObserver() {
+  const receiptModal = document.querySelector('#receipt-modal');
+  if (receiptMemoryObserver || !receiptModal) return;
+  receiptMemoryObserver = new MutationObserver(() => {
+    captureReceiptResult();
+    queueMicrotask(ensureReceiptHistoryPanel);
+  });
+  // 영수증 모달 내부만 감시합니다. 문서 전체를 감시하면 냉장고 렌더링과 클릭 이벤트에 불필요한 부하를 줍니다.
+  receiptMemoryObserver.observe(receiptModal, { childList: true, subtree: true });
+}
+
+function getReceiptDate(memory) {
+  const source = memory.purchaseDate || memory.attachedAt;
+  const date = source ? new Date(source) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function formatShortDate(date) {
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getIngredientShelfLifeDays(name) {
+  return ingredientShelfLifeDays.find(({ pattern }) => pattern.test(name))?.days || 7;
+}
+
+function normalizeReceiptMatchText(value) {
+  return String(value || '')
+    .replace(/[\d().,/~%g·]/g, ' ')
+    .replace(/(개|팩|봉|병|캔|장|인분|그램|g|ml|kg|L|약간|작은술|큰술)/gi, ' ')
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
+function getRecipeIngredientNames(recipe) {
+  const names = [
+    ...(recipe.ingredients || []),
+    ...(recipe.need || []).map((id) => INGREDIENTS.find((ingredient) => ingredient.id === id)?.name)
+  ];
+  return [...new Set(names.map(normalizeReceiptMatchText).filter((name) => name.length >= 2))];
+}
+
+function filterReceiptItemsForRecipe(recipe, memory) {
+  const recipeIngredientNames = getRecipeIngredientNames(recipe);
+  return memory.items.filter((item) => {
+    const receiptName = normalizeReceiptMatchText(item.name);
+    return recipeIngredientNames.some((ingredientName) =>
+      receiptName.includes(ingredientName) || ingredientName.includes(receiptName),
+    );
+  });
+}
+
+function getIngredientExpiryLabel(item, memory) {
+  const baseDate = getReceiptDate(memory);
+  const expiryDate = new Date(baseDate);
+  expiryDate.setDate(expiryDate.getDate() + getIngredientShelfLifeDays(item.name));
+  const isExpired = expiryDate.getTime() < Date.now();
+  return `${formatShortDate(expiryDate)}까지${isExpired ? ' · 소비기한 지남' : ''}`;
+}
+
+function renderReceiptItems(items, memory) {
+  return items.map((item) => `
+    <li>
+      <span>${escapeHtml(item.name)}${item.quantity ? ` (${escapeHtml(item.quantity)})` : ''}</span>
+      <span class="receipt-insight-actions">
+        <em>${escapeHtml(getIngredientExpiryLabel(item, memory))}</em>
+        <button type="button" data-receipt-item-delete="${escapeHtml(item.id || item.name)}" aria-label="${escapeHtml(item.name)} 다 먹은 것으로 표시하고 삭제" title="다 먹었어요">삭제</button>
+      </span>
+    </li>
+  `).join('');
+}
+
+function renderReceiptInsight(recipe, leftPage) {
+  if (!leftPage || leftPage.querySelector('[data-receipt-insight]')) return;
+  const memory = readReceiptMemory();
+  const matchedItems = filterReceiptItemsForRecipe(recipe, memory);
+  if (!matchedItems.length) return;
+  const date = getReceiptDate(memory);
+  const section = document.createElement('section');
+  section.dataset.receiptInsight = 'true';
+  section.className = 'recipe-receipt-insight';
+  section.style.marginTop = '14px';
+  section.innerHTML = `
+    <strong>🧾 이 레시피에 필요한 영수증 식재료</strong>
+    <small>기준일: ${escapeHtml(formatShortDate(date))}${memory.purchaseDate ? ' (구매일)' : ' (영수증 첨부일)'} · 일치 품목 ${matchedItems.length}개</small>
+    <ul>${renderReceiptItems(matchedItems, memory)}</ul>
+  `;
+  const meta = leftPage.querySelector('.notebook-detail-meta');
+  if (meta) meta.insertAdjacentElement('afterend', section);
+  else leftPage.appendChild(section);
+}
 
 export function hasActiveRecipeFilters() {
   return selectedCuisines.size > 0
@@ -487,6 +908,7 @@ export function decorateDetailPage() {
     seasoningStep.innerHTML = `<strong>간 맞춤:</strong> ${escapeHtml(getSeasoningTip(recipe))}`;
     stepsList.appendChild(seasoningStep);
   }
+  renderReceiptInsight(recipe, leftPage);
 
 }
 
@@ -506,8 +928,73 @@ function resetRecommendationFiltersForMenu() {
 
 export function initRecommend() {
   addCuisineChoices();
+  startReceiptMemoryObserver();
 
   document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    if (target.closest('[data-receipt-history-open]')) {
+      openReceiptLibrary();
+      return;
+    }
+
+    if (target.closest('[data-receipt-history-clear]')) {
+      if (!window.confirm('저장된 영수증과 연결된 분석 내역을 모두 삭제할까요?')) return;
+      clearStoredReceiptImages().then(() => {
+        writeReceiptAnalyses([]);
+        writeReceiptMemory({ items: [] });
+        refreshReceiptInsights();
+        listStoredReceiptImages().then((items) => renderReceiptLibrary(items));
+        showToast('저장된 영수증을 모두 삭제했어요.');
+      });
+      return;
+    }
+
+    if (target.closest('[data-receipt-history-close]') || target.matches('[data-receipt-history-library]')) {
+      closeReceiptLibrary();
+      return;
+    }
+
+    const receiptItemDelete = target.closest('[data-receipt-item-delete]');
+    if (receiptItemDelete) {
+      deleteReceiptAnalysisItem(receiptItemDelete.dataset.receiptItemDelete);
+      receiptItemDelete.closest('li')?.remove();
+      showToast('다 먹은 영수증 식재료를 삭제했어요.');
+      return;
+    }
+
+    const historyPreview = target.closest('[data-receipt-history-preview]');
+    if (historyPreview) {
+      listStoredReceiptImages().then((items) => renderReceiptLibrary(items, historyPreview.dataset.receiptHistoryPreview));
+      return;
+    }
+
+    const historySelect = target.closest('[data-receipt-history-select]');
+    if (historySelect) {
+      selectStoredReceiptImage(historySelect.dataset.receiptHistorySelect);
+      return;
+    }
+
+    const historyDelete = target.closest('[data-receipt-history-delete]');
+    if (historyDelete) {
+      const imageId = historyDelete.dataset.receiptHistoryDelete;
+      deleteStoredReceiptImage(imageId).then(() => {
+        deleteReceiptAnalysisForImage(imageId);
+        listStoredReceiptImages().then((items) => renderReceiptLibrary(items));
+        showToast('기억한 영수증을 삭제했어요.');
+      });
+      return;
+    }
+
+    if (target.closest('#btn-receipt-upload, #btn-receipt-choose, #btn-receipt-reselect')) {
+      receiptAttachedAt = new Date().toISOString();
+      queueMicrotask(ensureReceiptHistoryPanel);
+    }
+    if (target.closest('#btn-receipt-analyze')) {
+      captureReceiptResult();
+    }
+
     const recipesNavigation = event.target.closest('[data-nav="recipes"]');
     if (recipesNavigation) {
       resetRecommendationFiltersForMenu();
@@ -640,6 +1127,19 @@ export function initRecommend() {
     }
 
     // 💥 app.js와 100% 중복되던 캐러셀 슬라이더(prev, next, dot) 핸들러 제거
+  });
+
+  document.addEventListener('change', (event) => {
+    if (!event.target.matches('#receipt-file-input')) return;
+    const file = event.target.files?.[0];
+    if (file && !suppressNextReceiptImageSave) {
+      saveReceiptImage(file).then((record) => {
+        if (record) activeReceiptImageId = record.id;
+        refreshReceiptHistoryPanel();
+      });
+    }
+    suppressNextReceiptImageSave = false;
+    queueMicrotask(ensureReceiptHistoryPanel);
   });
 
   document.addEventListener('input', (event) => {
