@@ -1,6 +1,6 @@
 /* recipes_jsonb.csv 기반 레시피 데이터 */
 
-// 탕수육의 steps에 포함된 쉼표(,)들을 안전하게 따옴표 안으로 가두거나 온점(.)으로 치환하여 파싱 꼬임을 원천 차단했습니다.
+// 탕수육의 steps에 포함된 쉼표(,)들을 안전하게 큰따옴표("")로 감싸 파싱 꼬임을 원천 차단했습니다.
 const RAW_RECIPES = `name,category,ingredients,cook_time,difficulty,steps,emoji,aiReason,cookingSequence
 감자전,반찬·간편식,"감자, 계란, 부침가루, 식용유",20,쉬움,1. 감자를 강판이나 믹서로 곱게 갈아준다. | 2. 간 감자에 부침가루와 계란을 넣고 골고루 섞는다. | 3. 팬에 식용유를 두르고 반죽을 얇게 펴서 굽는다. | 4. 앞뒤로 노릇하게 구워지면 완성.,🥔,바삭하고 고소한 감자전은 비 오는 날이나 출출한 저녁 야식으로 딱 좋은 메뉴예요.,"['🥔', '🥣', '🍳', '🍽️']"
 볶음밥,밥류,"밥, 계란, 양파, 당근, 식용유, 간장",15,쉬움,1. 양파와 당근을 잘게 썬다. | 2. 팬에 기름을 두르고 채소를 볶는다. | 3. 밥을 넣고 간장으로 간을 하며 볶는다. | 4. 계란후라이를 올려 마무리한다.,🍛,남은 야채와 찬밥으로 빠르게 든든하고 맛있는 한 끼를 해결할 수 있어요.,"['🥕', '🍳', '🍚', '🍛']"
@@ -54,13 +54,17 @@ const csvRows = csvLines.slice(1).map((line) => {
   );
 });
 
+// [P0 버그 수정] 재료를 가져올 때 양끝 공백(.trim())을 제거해 카테고리 매칭이 꼬이는 것을 방지합니다.[cite: 1]
 const ingredientNames = [
   ...new Set([
-    ...csvRows.flatMap((row) => row.ingredients.split(", ")),
+    ...csvRows.flatMap((row) => 
+      row.ingredients.split(",").map(name => name.trim())
+    ).filter(Boolean),
     "치즈",
     "베이컨",
   ]),
 ];
+
 const ingredientEmoji = {
   계란: "🥚",
   감자: "🥔",
@@ -155,10 +159,12 @@ const ingredientCategoryMap = {
   미역: "vegetable",
 };
 
+// [P0 버그 수정] 전달되는 재료명 역시 양끝 공백을 자르고 정확하게 맵과 매칭되도록 보정합니다.[cite: 1]
 const ingredientCategory = (name) => {
-  const category = ingredientCategoryMap[name];
+  const cleanName = name.trim();
+  const category = ingredientCategoryMap[cleanName];
   if (!category) {
-    console.warn(`⚠️ [data.js] "${name}" 재료는 카테고리 매핑이 없어 vegetable로 처리됩니다. ingredientCategoryMap에 추가해주세요.`);
+    console.warn(`⚠️ [data.js] "${cleanName}" 재료는 카테고리 매핑이 없어 vegetable로 처리됩니다. ingredientCategoryMap에 추가해주세요.`);
     return "vegetable";
   }
   return category;
@@ -273,7 +279,7 @@ const substituteTipsMap = {
     { original: "순두부", alternatives: ["일반 모두부"], note: "일반 두부를 으깨어 넣어도 부드럽게 즐길 수 있어요." },
   ],
   "부대찌개": [
-    { original: "스팸", alternatives: ["프랑크 소시지", "다진 고기"], note: "다양한 종류 of 햄을 섞을수록 맛있습니다." },
+    { original: "스팸", alternatives: ["프랑크 소시지", "다진 고기"], note: "다양한 종류의 햄을 섞을수록 맛있습니다." },
   ],
   "미역국": [
     { original: "소고기", alternatives: ["황태", "홍합", "들깨가루"], note: "황태나 들깨가루를 넣으면 구수하고 시원해요." },
@@ -324,7 +330,7 @@ export const CATEGORIES = {
 
 export const RECIPES = csvRows.map((row, index) => {
   const fix = rowFixes[row.name] || {};
-  const ingredients = row.ingredients.split(", ");
+  const ingredients = row.ingredients.split(", ").map(name => name.trim());
   const steps = row.steps
     .split(" | ")
     .map((step) => step.replace(/^\d+\.\s*/, ""));
@@ -338,7 +344,7 @@ export const RECIPES = csvRows.map((row, index) => {
     id: `r${index + 1}`,
     name: row.name,
     category: row.category,
-    emoji: fix.emoji || row.emoji, // 탕수육 rowFixes를 올바르게 연결하기 위해 fix.emoji 우선 적용 처리
+    emoji: fix.emoji || row.emoji, // fix 구조에 명시된 데이터가 최우선 적용되도록 보장합니다.
     difficulty: row.difficulty,
     time: `${row.cook_time}분`,
     need: ingredients
@@ -408,7 +414,7 @@ export const ALTERNATIVE_RECIPES = [
       "불닭볶음면을 익혀 물을 따라버리고 소스를 넣어 비벼줍니다.",
       "면을 조금 남기거나 가위로 잘게 자른 뒤 참치마요 삼각김밥을 김째 부수어 넣습니다.",
       "위에 스트링치즈를 얹은 뒤 전자레인지에 1분간 가동합니다.",
-      "치즈가 녹으면 삼각김밥과 면, 불닭 소스를 골고루 비벼 맛있게 떠먹습니다.",
+      "치즈가 녹으면 삼각김밥 and 면, 불닭 소스를 골고루 비벼 맛있게 떠먹습니다.",
     ],
     cookingSequence: ["🍙", "🧀", "🍳", "🌶️"],
     priceList: [
