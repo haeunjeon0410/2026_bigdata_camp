@@ -62,15 +62,6 @@ function clampText(value, maxLength = 80) {
   return String(value || "").trim().slice(0, maxLength);
 }
 
-function getReceiptEndpoint() {
-  return (
-    document
-      .querySelector('meta[name="receipt-analysis-endpoint"]')
-      ?.getAttribute("content")
-      ?.trim() || ""
-  );
-}
-
 const ingredientAliasIndex = [...ingredientAliases.entries()].sort(
   ([aliasA], [aliasB]) => aliasB.length - aliasA.length,
 );
