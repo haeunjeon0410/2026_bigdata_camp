@@ -39,6 +39,7 @@ export const state = {
   carouselRecipes: [],
   currentCarouselIndex: 0,
   carouselDirection: null, // 'left' or 'right' or null
+  preserveRecipeResults: false, // 상세에서 레시피 화면으로 돌아올 때 기존 결과 유지
 
   // Detail page param
   currentDetail: null,
@@ -47,7 +48,6 @@ export const state = {
 
   // Cooking Flow Parameters
   cookingRecipeId: null,
-  cookingProgress: 0,
   ratingFeedback: null,
 
   // My Page Book Filter
@@ -89,22 +89,27 @@ export function navigate(route, param) {
   state.route = route;
 
   if (route === "recipes") {
-    const returningToNonDefaultRecipes =
-      returningFromDetail &&
-      state.detailBackRoute === "recipes" &&
-      state.recipeSource !== "normal";
+    const returningToRecipesFromDetail =
+      returningFromDetail && state.detailBackRoute === "recipes";
 
-    if (!returningToNonDefaultRecipes) {
+    if (returningToRecipesFromDetail) {
+      // 상세 진입 전의 추천 목록·필터·현재 인덱스를 그대로 복원합니다.
+      state.preserveRecipeResults = true;
+    } else {
+      state.preserveRecipeResults = false;
       state.showingAlternatives = false; // Reset to match default recipes
       state.recipeSource = state.recipeViewMode === "menu" ? "all" : "normal";
+      updateCarouselRecipes();
     }
-    updateCarouselRecipes();
-    // Default to first index if out of range, or reset
-    if (
-      state.currentCarouselIndex >= state.carouselRecipes.length ||
-      state.currentCarouselIndex < 0
-    ) {
-      state.currentCarouselIndex = 0;
+
+    if (!returningToRecipesFromDetail) {
+      // 새 레시피 목록을 만든 경우에만 인덱스 범위를 보정합니다.
+      if (
+        state.currentCarouselIndex >= state.carouselRecipes.length ||
+        state.currentCarouselIndex < 0
+      ) {
+        state.currentCarouselIndex = 0;
+      }
     }
   }
   if (route === "cooking") {
@@ -350,6 +355,14 @@ export function render() {
   const app = document.getElementById("app");
   if (!app) return;
 
+  // 레시피 화면은 필터를 먼저 적용한 뒤 HTML을 생성해야 합니다.
+  // 렌더 후 필터링하면 0건 상태에서도 이전 카드가 DOM에 남을 수 있습니다.
+  const preserveRecipeResults =
+    state.route === "recipes" && state.preserveRecipeResults;
+  if (state.route === "recipes" && !preserveRecipeResults) {
+    applyRecipeFilters();
+  }
+
   let html = "";
   switch (state.route) {
     case "home":
@@ -385,10 +398,13 @@ export function render() {
 
   app.innerHTML = `<div class="page ${isRouteChanged ? "route-change-active" : ""}">${html}</div>`;
 
-  // 💥 전체 메뉴 격자판('menu') 모드 복귀 시 동기적 리렌더링 강제 동기화 수행!
+  // 전체 메뉴 격자판('menu') 모드의 후처리만 수행합니다.
   if (state.route === "recipes" && state.recipeViewMode === "menu") {
-    applyRecipeFilters();
     decorateRecipeCard();
+  }
+
+  if (preserveRecipeResults) {
+    state.preserveRecipeResults = false;
   }
 
   if (state.route === "detail") {
@@ -460,12 +476,14 @@ function renderFridge() {
     (item) => item.category === "grain" || item.category === "meat",
   );
 
-  // Shelf 3 & Drawer Split for veggies
-  const drawerIds = ["cabbage", "pepper", "mushroom"];
+  // Shelf 3 & Drawer Split for veggies.
+  // Ingredient IDs are generated as i01, i02, ... in data.js, so use the
+  // stable display names here instead of outdated slug IDs.
+  const drawerNames = new Set(["양배추", "오이", "애호박"]);
   const shelf3Items = filtered.filter(
-    (item) => item.category === "vegetable" && !drawerIds.includes(item.id),
+    (item) => item.category === "vegetable" && !drawerNames.has(item.name),
   );
-  const drawerItems = filtered.filter((item) => drawerIds.includes(item.id));
+  const drawerItems = filtered.filter((item) => drawerNames.has(item.name));
 
   const s1Html =
     renderShelfItems(shelf1Items) ||
