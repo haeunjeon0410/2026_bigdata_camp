@@ -16,6 +16,24 @@ let isSearchComposing = false;
 let searchRefreshTimer = null;
 let activeDifficultyFilter = 'all';
 let lastRecipeViewMode = null;
+const recipeInsightState = {
+  recipeId: null,
+  status: 'idle'
+};
+
+const recipeInsightPresets = {
+  순두부찌개: {
+    cost: '약 2,900원',
+    costBasis: '1인분 · 기본 양념과 식용유 사용분 포함',
+    storage: [
+      ['순두부', '개봉 후 1~2일'],
+      ['계란', '냉장 2~3주'],
+      ['대파', '냉장 5~7일'],
+      ['다진 마늘', '냉장 3~5일']
+    ],
+    note: '제품 포장 소비기한과 개봉일을 우선 확인하세요. 아래 값은 보수적으로 잡은 참고용 추정치입니다.'
+  }
+};
 
 export function hasActiveRecipeFilters() {
   return selectedCuisines.size > 0
@@ -688,6 +706,64 @@ function scheduleRecipeSearch(searchInput) {
   }, 180);
 }
 
+function getRecipeInsight(recipe) {
+  return recipeInsightPresets[getCanonicalRecipeName(recipe)] || null;
+}
+
+function renderRecipeInsightPanel(leftPage, recipe) {
+  if (!leftPage) return;
+  const insight = getRecipeInsight(recipe);
+  const existing = leftPage.querySelector('[data-recipe-insight]');
+  if (!insight) {
+    existing?.remove();
+    return;
+  }
+
+  const isCurrentRecipe = recipeInsightState.recipeId === recipe.id;
+  const status = isCurrentRecipe ? recipeInsightState.status : 'idle';
+  const panel = existing || document.createElement('section');
+  panel.dataset.recipeInsight = 'true';
+  panel.style.cssText = 'margin-top:14px; padding:12px; border:2px solid var(--color-orange-deep); border-radius:var(--br-md); background:linear-gradient(135deg, #fff8ed, #fffdf8); color:var(--color-charcoal); font-size:12px; line-height:1.55; text-align:left;';
+
+  if (status === 'loading') {
+    panel.innerHTML = `
+      <strong style="display:block; color:var(--color-orange-deep);">🤖 AI가 정보를 정리하고 있어요</strong>
+      <span style="display:block; margin-top:4px;">보관 권장기간과 1인분 예상비용을 계산하는 중...</span>
+      <span aria-hidden="true" style="display:block; margin-top:7px; width:100%; height:5px; border-radius:99px; background:var(--color-cream-dark); overflow:hidden;"><i style="display:block; width:45%; height:100%; background:var(--color-orange); animation:progress-loading 1s ease-in-out infinite alternate;"></i></span>
+    `;
+  } else if (status === 'ready') {
+    panel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;"><strong style="color:var(--color-orange-deep);">🤖 AI 판단 요약</strong><span style="font-size:10px; color:var(--color-gray);">순두부찌개</span></div>
+      <div style="margin-top:8px; padding:8px; border-radius:10px; background:#fff;"><strong>💰 1인분 예상비용 ${escapeHtml(insight.cost)}</strong><div style="margin-top:2px; color:var(--color-gray);">${escapeHtml(insight.costBasis)}</div></div>
+      <div style="margin-top:8px;"><strong>🧊 권장 보관기간</strong><ul style="margin:4px 0 0; padding-left:18px;">${insight.storage.map(([name, period]) => `<li><b>${escapeHtml(name)}</b>: ${escapeHtml(period)}</li>`).join('')}</ul></div>
+      <p style="margin:8px 0 0; font-size:10px; color:var(--color-gray);">${escapeHtml(insight.note)}</p>
+    `;
+  } else {
+    panel.innerHTML = `
+      <strong style="display:block; color:var(--color-orange-deep);">🤖 AI 판단 정보</strong>
+      <p style="margin:4px 0 8px;">공개 보관 가이드와 재료 구성을 참고해 보관기간과 조리 비용을 정리해 드려요.</p>
+      <button type="button" class="btn btn-secondary btn-sm" data-recipe-insight-start style="width:100%;">보관·비용 분석하기</button>
+    `;
+  }
+
+  if (!existing) leftPage.appendChild(panel);
+}
+
+function startRecipeInsight(recipe, detailContainer) {
+  const insight = getRecipeInsight(recipe);
+  if (!insight || (recipeInsightState.recipeId === recipe.id && recipeInsightState.status === 'loading')) return;
+
+  recipeInsightState.recipeId = recipe.id;
+  recipeInsightState.status = 'loading';
+  renderRecipeInsightPanel(detailContainer.querySelector('.notebook-left-page'), recipe);
+
+  window.setTimeout(() => {
+    if (state.route !== 'detail' || state.currentDetail !== recipe.id) return;
+    recipeInsightState.status = 'ready';
+    renderRecipeInsightPanel(detailContainer.querySelector('.notebook-left-page'), recipe);
+  }, 1100);
+}
+
 export function decorateDetailPage() {
   if (state.route !== 'detail') return;
   const aiReason = document.querySelector('.notebook-ai-reason');
@@ -730,6 +806,8 @@ export function decorateDetailPage() {
     else leftPage.appendChild(extraIngredients);
   }
 
+  renderRecipeInsightPanel(leftPage, recipe);
+
   // 좌측의 감성적인 AI 설명은 제거하고, 구체적인 조리방법은 우측 순서 영역에 넣습니다.
   if (aiReason) aiReason.remove();
   const stepsList = detailContainer.querySelector('.notepad-steps');
@@ -748,19 +826,6 @@ export function decorateDetailPage() {
     stepsList.appendChild(seasoningStep);
   }
 
-  if (detailContainer.querySelector('[data-detail-navigation]')) return;
-  const recipeIndex = state.carouselRecipes.findIndex((item) => item.id === recipe.id);
-  if (recipeIndex < 0 || state.carouselRecipes.length < 2) return;
-  const previous = state.carouselRecipes[(recipeIndex - 1 + state.carouselRecipes.length) % state.carouselRecipes.length];
-  const next = state.carouselRecipes[(recipeIndex + 1) % state.carouselRecipes.length];
-  const navigation = document.createElement('div');
-  navigation.dataset.detailNavigation = 'true';
-  navigation.style.cssText = 'display:flex; justify-content:space-between; gap:12px; margin:24px 0 8px;';
-  navigation.innerHTML = `
-    <button type="button" class="btn btn-outline" data-detail-nav="${previous.id}" style="flex:1;">← 이전 레시피</button>
-    <button type="button" class="btn btn-primary" data-detail-nav="${next.id}" style="flex:1;">다음 레시피 →</button>
-  `;
-  detailContainer.appendChild(navigation);
 }
 
 function normalizeMypageRecipeNames() {
@@ -835,6 +900,15 @@ export function initRecommend() {
       state.preserveRecipeResults = true;
       render();
       decorateCarouselView();
+      return;
+    }
+
+    const recipeInsightButton = event.target.closest('[data-recipe-insight-start]');
+    if (recipeInsightButton && state.route === 'detail') {
+      const recipe = state.carouselRecipes?.find((item) => item.id === state.currentDetail)
+        || [...RECIPES, ...ALTERNATIVE_RECIPES].find((item) => item.id === state.currentDetail);
+      const detailContainer = recipeInsightButton.closest('.detail-container');
+      if (recipe && detailContainer) startRecipeInsight(recipe, detailContainer);
       return;
     }
 
