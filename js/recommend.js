@@ -469,19 +469,6 @@ export function decorateDetailPage() {
     stepsList.appendChild(seasoningStep);
   }
 
-  if (detailContainer.querySelector('[data-detail-navigation]')) return;
-  const recipeIndex = state.carouselRecipes.findIndex((item) => item.id === recipe.id);
-  if (recipeIndex < 0 || state.carouselRecipes.length < 2) return;
-  const previous = state.carouselRecipes[(recipeIndex - 1 + state.carouselRecipes.length) % state.carouselRecipes.length];
-  const next = state.carouselRecipes[(recipeIndex + 1) % state.carouselRecipes.length];
-  const navigation = document.createElement('div');
-  navigation.dataset.detailNavigation = 'true';
-  navigation.style.cssText = 'display:flex; justify-content:space-between; gap:12px; margin:24px 0 8px;';
-  navigation.innerHTML = `
-    <button type="button" class="btn btn-outline" data-detail-nav="${previous.id}" style="flex:1;">← 이전 레시피</button>
-    <button type="button" class="btn btn-primary" data-detail-nav="${next.id}" style="flex:1;">다음 레시피 →</button>
-  `;
-  detailContainer.appendChild(navigation);
 }
 
 export function initRecommend() {
@@ -580,16 +567,6 @@ export function initRecommend() {
     if (overviewRecipe) {
       state.detailBackRoute = 'recipes';
       navigate('detail', overviewRecipe.dataset.overviewRecipe);
-      return;
-    }
-
-    const detailNavigation = event.target.closest('[data-detail-nav]');
-    if (detailNavigation) {
-      const recipeId = detailNavigation.dataset.detailNav;
-      const recipeIndex = state.carouselRecipes.findIndex((recipe) => recipe.id === recipeId);
-      if (recipeIndex >= 0) state.currentCarouselIndex = recipeIndex;
-      state.detailBackRoute = 'recipes';
-      navigate('detail', recipeId);
       return;
     }
 
