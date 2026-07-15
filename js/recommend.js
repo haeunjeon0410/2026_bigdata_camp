@@ -308,6 +308,22 @@ export function decorateRecipeCard() {
     else recipesContainer.prepend(toolbar);
   }
 
+  // 필터 변경 후에도 버튼이 현재 선택 상태를 반영하도록 동기화합니다.
+  recipesContainer?.querySelectorAll('[data-cuisine-filter]').forEach((button) => {
+    const cuisine = button.dataset.cuisineFilter;
+    const isActive = cuisine === 'all'
+      ? selectedCuisines.size === 0
+      : selectedCuisines.has(cuisine);
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+
+  recipesContainer?.querySelectorAll('[data-difficulty-filter]').forEach((button) => {
+    const isActive = button.dataset.difficultyFilter === activeDifficultyFilter;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+
   if (recipesContainer) {
     const carousel = recipesContainer.querySelector('.carousel-wrapper');
     const dots = recipesContainer.querySelector('.carousel-dots');
