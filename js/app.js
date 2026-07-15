@@ -1,12 +1,19 @@
 import { INGREDIENTS, RECIPES, ALTERNATIVE_RECIPES } from './data.js';
-import { applyRecipeFilters, decorateRecipeCard } from './recommend.js';
+import { applyRecipeFilters, decorateRecipeCard, decorateDetailPage } from './recommend.js';
 
 // Initial State Management
 export const state = {
   selected: new Set(), // 협업/테스트 검증을 위해 기본 선택 재료를 비워두었습니다.
   search: '',
   activeCategory: 'all',
-  favorites: new Set(),
+  favorites: (() => {
+    try {
+      const map = JSON.parse(localStorage.getItem('favoriteAddedAt') || '{}');
+      return new Set(Object.keys(map));
+    } catch {
+      return new Set();
+    }
+  })(),
   route: 'home',
   // 메뉴바 레시피 탭과 냉장고에서 진입한 추천 캐러셀을 구분합니다.
   recipeViewMode: 'menu', // 'menu' | 'carousel'
@@ -14,9 +21,13 @@ export const state = {
   // Refrigerator open state
   isFridgeOpen: false,
   showingAlternatives: false, // track whether showing alternative 6 recipes
-  cookedCounts: {}, // 협업/테스트 검증을 위해 기본 조리 횟수를 비워두었습니다.
-  dislikedRecipeIds: new Set(), // 싫어하는 레시피 아이디 저장 Set
-
+  cookedCounts: (() => {
+    try {
+      return JSON.parse(localStorage.getItem('cookedCounts') || '{}');
+    } catch {
+      return {};
+    }
+  })(),
   // Recipe Carousel State
   carouselRecipes: [],
   currentCarouselIndex: 0,
@@ -83,6 +94,11 @@ export function navigate(route, param) {
     state.cookingRecipeId = param;
     if (param) {
       state.cookedCounts[param] = (state.cookedCounts[param] || 0) + 1;
+      try {
+        localStorage.setItem('cookedCounts', JSON.stringify(state.cookedCounts));
+      } catch (err) {
+        console.warn("도감 조리 횟수 저장 실패:", err);
+      }
       
       // 조리 완료 시 해당 요리에 들어간 식재료(need)를 state.selected에서 자동 삭제 차감
       let recipe = RECIPES.find(r => r.id === param);
@@ -152,9 +168,9 @@ export function updateCarouselRecipes() {
     return { ...r, missing, matched, total, rate };
   });
 
-  // Sort: highest match rate first. If match rate is equal, sort by cooking time
+  // Sort by match rate first, then cooking time, and show only the top 10 in the carousel.
   list.sort((a, b) => b.rate - a.rate || parseInt(a.time) - parseInt(b.time));
-  state.carouselRecipes = list;
+  state.carouselRecipes = list.slice(0, 10);
 }
 
 // Event Listeners for Nav delegation
@@ -252,7 +268,7 @@ document.addEventListener('click', (e) => {
     }
   } else if (dotBtn) {
     const targetIdx = parseInt(dotBtn.dataset.index, 10);
-    if (!isNaN(targetIdx)) {
+    if (!isNaN(targetIdx) && targetIdx !== state.currentCarouselIndex) {
       state.carouselDirection = targetIdx > state.currentCarouselIndex ? 'right' : 'left';
       state.currentCarouselIndex = targetIdx;
       render();
@@ -319,6 +335,10 @@ export function render() {
   if (state.route === 'recipes' && state.recipeViewMode === 'menu') {
     applyRecipeFilters();
     decorateRecipeCard();
+  }
+
+  if (state.route === 'detail') {
+    decorateDetailPage();
   }
 }
 
@@ -516,14 +536,25 @@ function renderRecipes() {
   const recipes = state.carouselRecipes;
 
   if (recipes.length === 0) {
-    return `
-      <div class="recipes-container" style="text-align:center; padding: 60px 0;">
-        <span style="font-size: 80px; display:block; margin-bottom: 20px;">🤷</span>
-        <h2 class="fridge-title">아직 재료가 없어요</h2>
-        <p class="fridge-subtitle" style="margin-bottom: 20px;">재료를 하나 이상 골라야 요리를 할 수 있답니다.</p>
-        <button class="btn btn-primary" data-nav="fridge">식재료 고르러 가기 🧺</button>
-      </div>
-    `;
+    if (state.selected.size > 0) {
+      return `
+        <div class="recipes-container" style="text-align:center; padding: 60px 0;">
+          <span style="font-size: 80px; display:block; margin-bottom: 20px;">😢</span>
+          <h2 class="fridge-title">조건에 맞는 레시피가 없어요</h2>
+          <p class="fridge-subtitle" style="margin-bottom: 20px;">선택하신 취향이나 상황 필터를 조금 변경해 보시는 건 어떨까요?</p>
+          <button class="btn btn-primary" id="btn-suggest-recipes" style="margin: 0 auto; display: block;">필터 다시 설정하기</button>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="recipes-container" style="text-align:center; padding: 60px 0;">
+          <span style="font-size: 80px; display:block; margin-bottom: 20px;">🤷</span>
+          <h2 class="fridge-title">아직 재료가 없어요</h2>
+          <p class="fridge-subtitle" style="margin-bottom: 20px;">재료를 하나 이상 골라야 요리를 할 수 있답니다.</p>
+          <button class="btn btn-primary" data-nav="fridge">식재료 고르러 가기 🧺</button>
+        </div>
+      `;
+    }
   }
 
   const currentIdx = state.currentCarouselIndex;

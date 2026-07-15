@@ -5,6 +5,7 @@
 /* 추천 기능 모듈 */
 
 import { state, showToast, render, navigate, updateCarouselRecipes } from './app.js';
+import { RECIPES, ALTERNATIVE_RECIPES } from './data.js';
 
 // 추천 화면에서만 사용하는 취향 상태입니다. app.js의 state 구조는 변경하지 않습니다.
 const selectedPreferences = new Set();
@@ -236,8 +237,8 @@ export function applyRecipeFilters() {
     : filteredRecipes;
 
   searchedRecipes.sort((a, b) =>
-    b.preferenceScore - a.preferenceScore ||
     b.rate - a.rate ||
+    b.preferenceScore - a.preferenceScore ||
     (a.missing?.length || 0) - (b.missing?.length || 0) ||
     getMinutes(a) - getMinutes(b)
   );
@@ -411,13 +412,13 @@ function scheduleRecipeSearch(searchInput) {
   }, 180);
 }
 
-function decorateDetailPage() {
+export function decorateDetailPage() {
   if (state.route !== 'detail') return;
   const aiReason = document.querySelector('.notebook-ai-reason');
   const detailContainer = document.querySelector('.detail-container');
   if (!detailContainer) return;
 
-  const recipe = state.carouselRecipes?.find((item) => item.id === state.currentDetail);
+  const recipe = [...RECIPES, ...ALTERNATIVE_RECIPES].find((item) => item.id === state.currentDetail);
   if (!recipe) return;
 
   document.querySelectorAll('.notebook-notepad .notepad-title').forEach((title) => {
@@ -467,18 +468,6 @@ function decorateDetailPage() {
   detailContainer.appendChild(navigation);
 }
 
-function syncRenderedView() {
-  if (state.route === 'recipes') {
-    if (state.recipeViewMode === 'menu'
-      && !document.getElementById('app')?.querySelector('[data-recipe-overview]')) {
-      applyRecipeFilters();
-      decorateRecipeCard();
-    }
-    return;
-  }
-  if (state.route === 'detail') decorateDetailPage();
-}
-
 export function initRecommend() {
   addCuisineChoices();
 
@@ -503,17 +492,23 @@ export function initRecommend() {
     const tasteClose = event.target.closest('.btn-taste-close');
     const tasteSuggest = event.target.closest('.btn-taste-suggest');
     if (tasteClose || tasteSuggest) {
-      const tasteModal = document.getElementById('taste-modal');
-      if (tasteModal) {
-        tasteModal.classList.remove('show');
-      }
-      if (tasteSuggest) {
+      if (tasteClose) {
+        // 1. 모달 내 활성화된 모든 칩 active 클래스 제거
+        document.querySelectorAll('#taste-modal .chip-btn').forEach((chip) => {
+          chip.classList.remove('active');
+        });
+        // 2. 필터 데이터 비우기
+        selectedPreferences.clear();
+        selectedCuisines.clear();
+      } else if (tasteSuggest) {
+        const tasteModal = document.getElementById('taste-modal');
+        if (tasteModal) {
+          tasteModal.classList.remove('show');
+        }
         rememberTasteChoices();
         state.recipeViewMode = 'carousel';
-      }
-      navigate('recipes');
-      if (tasteSuggest) {
-        // navigate()가 기본 추천 목록을 다시 계산하므로 취향/부족 재료를 재적용합니다.
+        state.currentCarouselIndex = 0; // 새 추천 시 인덱스를 항상 0으로 리셋
+        navigate('recipes');
         applyRecipeFilters();
         render();
       }
