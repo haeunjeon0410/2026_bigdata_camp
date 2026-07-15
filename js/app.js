@@ -171,13 +171,18 @@ export function navigate(route, param) {
 
 // Update sorted carousel recipe lists relative to selections
 function calculateMissingIngredients(recipe) {
-  // 편의점 레시피는 need가 대표 재료 ID만 가지고 있어 기존 상세 missing 목록을 사용합니다.
-  if (
-    String(recipe?.id || "").startsWith("alt") &&
-    Array.isArray(recipe.missing) &&
-    recipe.missing.length
-  ) {
-    return [...recipe.missing];
+  // 편의점 레시피는 고정 구매 품목과 냉장고 부족 재료를 함께 표시합니다.
+  if (String(recipe?.id || "").startsWith("alt")) {
+    const fixedMissing = Array.isArray(recipe.missing) ? recipe.missing : [];
+    const missingFromNeed = (recipe.need || [])
+      .filter((ingredientId) => !state.selected.has(ingredientId))
+      .map(
+        (ingredientId) =>
+          INGREDIENTS.find((ingredient) => ingredient.id === ingredientId)
+            ?.name || ingredientId,
+      );
+
+    return [...new Set([...fixedMissing, ...missingFromNeed])];
   }
 
   const need = recipe.need || [];
