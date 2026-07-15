@@ -48,26 +48,43 @@ function getIngredientAmount(recipe, need) {
 }
 
 function getMissingIngredients(recipe, selectedKeys) {
-  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing) && recipe.missing.length) {
-    return recipe.missing
-      .map((ingredientName) => ({ ingredientName: String(ingredientName).trim(), amount: '1개' }))
-      .filter((item) => item.ingredientName);
+  const missingList = [];
+
+  // 1. [편의점 레시피 전용] 냉장고 선택 여부와 상관없는 무조건 고정 구매 재료 (recipe.missing)
+  if (String(recipe?.id || '').startsWith('alt') && Array.isArray(recipe.missing)) {
+    recipe.missing.forEach((ingredientName) => {
+      if (ingredientName) {
+        missingList.push({
+          ingredientName: String(ingredientName).trim(),
+          amount: '1개' // 수량이 따로 명시되지 않은 완제품 기성품의 기본값
+        });
+      }
+    });
   }
 
-  return recipe.need.map((need, index) => {
-    const recipeIngredient = recipe.ingredients?.[index];
-    const needKeys = new Set([
-      ...getIngredientKeys(need),
-      ...getIngredientKeys(recipeIngredient)
-    ]);
-    const isSelected = [...needKeys].some((key) => selectedKeys.has(key));
-    if (isSelected) return null;
+  // 2. 냉장고 재료(need) 중 사용자가 냉장고에서 선택하지 않은 부족 재료를 동적으로 계산하여 추가
+  if (Array.isArray(recipe.need)) {
+    recipe.need.forEach((need, index) => {
+      const recipeIngredient = recipe.ingredients?.[index];
+      const needKeys = new Set([
+        ...getIngredientKeys(need),
+        ...getIngredientKeys(recipeIngredient)
+      ]);
+      
+      // 사용자가 냉장고에서 선택했는지 여부 확인
+      const isSelected = [...needKeys].some((key) => selectedKeys.has(key));
+      
+      // 냉장고에서 선택되지 않은 재료만 부족 재료 목록에 동적으로 추가
+      if (!isSelected) {
+        missingList.push({
+          ingredientName: getIngredientName(need, recipeIngredient),
+          amount: getIngredientAmount(recipe, need)
+        });
+      }
+    });
+  }
 
-  return {
-  ingredientName: getIngredientName(need, recipeIngredient),
-  amount: getIngredientAmount(recipe, need)
-  };
-  }).filter(Boolean).filter((ingredient) => ingredient.ingredientName);
+  return missingList;
 }
 
 function escapeHtml(value) {
